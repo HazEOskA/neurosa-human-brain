@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@neurosa/ast": ["packages/neurosa-ast/src/index.ts"],
+      "@neurosa/lexer": ["packages/neurosa-lexer/src/index.ts"],
+      "@neurosa/parser": ["packages/neurosa-parser/src/index.ts"],
+      "@neurosa/semantic-analysis": ["packages/neurosa-semantic-analysis/src/index.ts"],
+      "@neurosa/ir": ["packages/neurosa-ir/src/index.ts"],
+      "@neurosa/compiler": ["packages/neurosa-compiler/src/index.ts"],
+      "@neurosa/domain": ["packages/brain-domain/src/index.ts"],
+      "@neurosa/ledger": ["packages/event-ledger/src/index.ts"],
+      "@neurosa/runtime": ["packages/neural-runtime/src/index.ts"],
+      "@neurosa/obsidian": ["packages/obsidian-adapter/src/index.ts"],
+      "@neurosa/api-contracts": ["packages/brain-api-contracts/src/index.ts"],
+      "@neurosa/api": ["packages/brain-api/src/index.ts"]
+    },
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "packages/**/*.ts",
+    "tests/**/*.ts",
+    "examples/**/*.ts"
+  ],
+  "exclude": ["**/.next/**", "**/node_modules/**", "**/dist/**"]
+}
