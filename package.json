@@ -1,0 +1,41 @@
+{
+  "name": "neurosa-human-brain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "check": "node --import tsx packages/neurosa-cli/src/cli.ts check examples/minimal-brain/brain.nsa",
+    "compile": "node --import tsx packages/neurosa-cli/src/cli.ts compile examples/minimal-brain/brain.nsa",
+    "dev:web": "pnpm --filter @neurosa/brain-web dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "smoke": "node --import tsx tests/e2e/vertical-slice.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@types/node": "26.1.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "next": "16.2.12",
+    "prettier": "3.9.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tsx": "4.23.1",
+    "turbo": "2.10.8",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10",
+    "zod": "4.4.3"
+  }
+}
