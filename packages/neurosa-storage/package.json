@@ -8,8 +8,13 @@
     "build": "tsc --noEmit -p ../../tsconfig.json"
   },
   "dependencies": {
+    "@neurosa/document-domain": "workspace:*",
     "@neurosa/event-ledger": "workspace:*",
     "@neurosa/ir": "workspace:*",
-    "@neurosa/runtime-domain": "workspace:*"
+    "@neurosa/runtime-domain": "workspace:*",
+    "better-sqlite3": "13.0.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "9.6.0"
   }
 }

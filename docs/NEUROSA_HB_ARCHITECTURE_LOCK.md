@@ -7,7 +7,7 @@ License: MIT
 
 ## 1. Purpose
 
-NEUROSA-HB is an independent, local-first, programmable cognitive layer for agentic runtimes. The v0.1 vertical slice compiles `.nsa` source into deterministic Neural IR, loads it into a bounded event-driven runtime, indexes an Obsidian-compatible Markdown Vault, exposes a framework-neutral Brain API, renders real runtime events, and persists an auditable hash-chain ledger.
+NEUROSA-HB is an independent, local-first, programmable cognitive layer for agentic runtimes. The v0.1 product compiles `.nsa` source into deterministic Neural IR, loads it into a bounded event-driven runtime and keeps documents, memory, runtime state and an auditable hash-chain ledger in its own native storage. Obsidian is an optional one-time import source, never a runtime dependency.
 
 It is not an agent, agent framework, generic RAG system, vector database, Hydra dashboard, Hermes module, or Michael Angelo component.
 
@@ -17,10 +17,10 @@ Persistent, plastic, and auditable cognition. Every mutation requires a computat
 
 ## 3. Trust boundaries
 
-1. Operator approval controls persistent inferred relations and Vault writeback.
+1. Operator approval controls persistent inferred relations and destructive native-memory mutations.
 2. Agents have explicit identities, namespaces, trust, and deny-by-default mutation permissions.
 3. Untrusted `.nsa` must pass lexing, parsing, semantic analysis, and type checking before execution.
-4. Vault content is untrusted text; scripts never execute and resolved paths stay inside the canonical Vault root.
+4. Imported content is untrusted data; scripts never execute and resolved paths stay inside the canonical import root.
 5. Runtime activation is bounded by hops, event budget, minimum strength, timeout, cycles, and cancellation.
 6. Storage is hidden behind repositories; normal APIs cannot rewrite ledger history.
 7. UI is a read-only projection of persisted state and actual events.
@@ -31,9 +31,11 @@ Persistent, plastic, and auditable cognition. Every mutation requires a computat
 flowchart TD
   NSA["NEUROSA source"] --> C["Compiler pipeline"]
   C --> IR["Versioned Neural IR"]
-  V["Obsidian Vault"] --> A["Safe Vault adapter"]
+  D["Native documents"] --> W["Native workspace"]
+  V["Optional import source"] --> A["Read-only one-time importer"]
   IR --> R["Neural runtime"]
-  A --> R
+  A --> W
+  W --> R
   API["Agent Brain API"] --> R
   R --> L["Hash-chain ledger"]
   R --> UI["Living Brain projection"]
@@ -43,7 +45,8 @@ flowchart TD
 
 - Compiler: lexer, parser, AST, semantics, type checker, IR, compiler, CLI.
 - Domain/runtime: neurons, dendrites, axons, synapses, impulses, bounded propagation, plastic proposals.
-- Memory: Vault adapter, persistent brain state, provenance, evidence, ledger.
+- Memory: native Markdown documents, folders, revisions, tags, links, backlinks, FTS5 search, persistent brain state, provenance, evidence and ledger.
+- Import: isolated read-only importers copy data into native storage and disconnect from their source.
 - Integration: framework-neutral Brain API with agent policy.
 - Delivery: local Next.js Living Brain UI driven by runtime state and event IDs.
 
@@ -53,11 +56,11 @@ Neural IR version `0.1` is canonical JSON with sorted entities and stable SHA-25
 
 ## 7. Operation flow
 
-Source is hashed, parsed and checked; valid AST is lowered to IR. Runtime validates/loads IR and persists state. Vault indexing creates note neurons and explicit wikilink synapses. Authenticated recall/activation creates bounded impulses and ledger events. Repeated coactivation may create only `PROPOSED` relations. Operator approval permits backup, atomic Markdown writeback, reindexing, and ledger append. UI consumes only persisted state and events.
+Source is hashed, parsed and checked; valid AST is lowered to IR. Runtime validates/loads IR and persists state. Native documents are revisioned and indexed locally with FTS5. Optional importers copy source material into native storage, resolve supported links and then release the source. Authenticated recall/activation creates bounded impulses and ledger events. Repeated coactivation may create only `PROPOSED` relations. UI consumes only persisted state and events.
 
 ## 8. Cryptography and security
 
-SHA-256 binds source, provenance, and each ledger event to its predecessor. Canonical path validation and `realpath` prevent traversal/symlink escape. Markdown is data only. Writeback is read-only by default, approval-gated, backed up, and atomically renamed. The hash chain detects modification but does not prevent a local administrator deleting the entire store; external anchoring is out of scope.
+SHA-256 binds source, document content, provenance and each ledger event to its predecessor. Canonical path validation and `realpath` prevent traversal and symlink escape during import. Markdown is data only. Original import sources are read-only. The hash chain detects modification but does not prevent a local administrator deleting the entire store; external anchoring is out of scope.
 
 ## 9. Network
 
@@ -65,17 +68,17 @@ Services bind to loopback by default. Core compiler/runtime need no network. The
 
 ## 10. Recovery
 
-Runtime state is atomically persisted and recovered after restart. Ledger recovery verifies the full chain before accepting new events. Vault writeback creates an exact backup before atomic replacement. Corruption halts mutation. Code rollback uses `git revert`; Vault rollback restores the recorded backup and reindexes.
+Runtime state and native documents are persisted in versioned SQLite migrations and recovered after restart. Documents keep immutable revision snapshots, soft deletion and restoration. Ledger recovery verifies the full chain before accepting new events. Backup and restore operate on the native store; corruption halts mutation. Code rollback uses `git revert`.
 
 ## 11. Security invariants
 
-Invalid source never executes; Vault paths never escape root; notes never execute code; persistent inferred relations require explicit approval; declared relations are never silently pruned; every accepted mutation appends evidence; activation is finite; agent working memory is isolated; mutation is deny-by-default; UI state comes from real events.
+Invalid source never executes; import paths never escape their root; documents never execute code; original import sources are never modified; persistent inferred relations require explicit approval; declared relations are never silently pruned; every accepted mutation appends evidence; activation is finite; agent working memory is isolated; mutation is deny-by-default; UI state comes from real events.
 
 ## 12. Repository structure
 
-`apps/` contains delivery boundaries. `packages/` contains compiler, domain/runtime, storage/Vault, ledger, API contracts and integrations. `examples/` holds executable fixtures. `tests/` holds compiler, runtime, integration, security, API, UI and vertical E2E validation. `docs/` holds locked specifications.
+`apps/` contains delivery boundaries. `packages/` contains compiler, document and runtime domains, native workspace, storage, ledger, API contracts and integrations. `examples/` holds executable fixtures. `tests/` holds compiler, workspace, runtime, integration, security, API, UI and vertical E2E validation. `docs/` holds locked specifications.
 
-No external graph database is permitted. Storage stays behind repository interfaces. Atomic JSON is acceptable for the reconstruction slice; typed SQLite is required before release v0.1.
+No external graph database is permitted. Storage stays behind repository interfaces. The native store uses a stable SQLite driver, WAL, foreign keys, versioned migrations and FTS5.
 
 ## 13. Validation requirements
 
@@ -86,10 +89,10 @@ Formatting, typed lint, strict typecheck, compiler tests, deterministic IR, runt
 1. **Pseudobiology:** labels can hide CRUD. Control: every mechanism needs input/output/configuration, implementation, deterministic test, and event.
 2. **Graph pollution:** learned relations can become noise. Control: coactivation/evidence/confidence thresholds, deduplication, proposal state, approval, and pruning.
 3. **Runaway activation:** cycles can consume resources. Control: hops, strength, visited edges, event budget, timeout, cancellation.
-4. **Vault damage:** writeback can corrupt human memory. Control: read-only default, canonical paths, approval, backup, atomic rename, reindex, ledger, rollback.
+4. **Native data loss or hostile import:** a crash or crafted source can damage memory. Control: revisions, trash, transactions, WAL, backup/restore, read-only import, canonical paths, symlink and archive-boundary checks.
 
 ## 15. Locked decisions and out of scope
 
-Locked: independent repository; `.nsa`; real compiler stages; versioned IR; local-first bounded runtime; explicit neural contracts; Obsidian-compatible Markdown; append-only hash-chain ledger; deny-by-default mutations; pnpm, strict TypeScript, Turborepo, Node.js, Next.js/React, Zod, Vitest, ESLint, Prettier.
+Locked: independent repository; `.nsa`; real compiler stages; versioned IR; local-first bounded runtime; explicit neural contracts; native Markdown workspace; Obsidian as optional one-time import only; append-only hash-chain ledger; deny-by-default mutations; pnpm, strict TypeScript, Turborepo, Node.js, stable SQLite adapter, Next.js/React, Zod, Vitest, ESLint, Prettier.
 
-Out of scope: atom-level biological simulation, consciousness claims, automatic permanent Vault mutation, public admin API, mandatory cloud, external graph database, model-provider lock-in, Hydra/Hermes/Michael Angelo ownership, external ledger anchoring. Material changes require operator-approved change control with migration, validation, and rollback impact.
+Out of scope: atom-level biological simulation, consciousness claims, runtime dependence on Obsidian, modification of an original Vault, public admin API, mandatory cloud, external graph database, model-provider lock-in, Hydra/Hermes/Michael Angelo ownership, external ledger anchoring. Material changes require operator-approved change control with migration, validation, and rollback impact.

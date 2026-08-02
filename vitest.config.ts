@@ -19,6 +19,8 @@ export default defineConfig({
       "@neurosa/storage": `${root}packages/neurosa-storage/src/index.ts`,
       "@neurosa/activation": `${root}packages/neurosa-activation/src/index.ts`,
       "@neurosa/neural-runtime": `${root}packages/neurosa-runtime/src/index.ts`,
+      "@neurosa/document-domain": `${root}packages/neurosa-document-domain/src/index.ts`,
+      "@neurosa/workspace": `${root}packages/neurosa-workspace/src/index.ts`,
       "@neurosa/domain": `${root}packages/brain-domain/src/index.ts`,
       "@neurosa/ledger": `${root}packages/event-ledger/src/index.ts`,
       "@neurosa/runtime": `${root}packages/neural-runtime/src/index.ts`,

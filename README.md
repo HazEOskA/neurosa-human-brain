@@ -12,6 +12,8 @@ Zaimplementowany przepływ:
 
 Runtime obsługuje neurony, rzeczywiste synapsy pobudzające i hamujące, ograniczoną propagację impulsów, pełny ślad aktywacji, trwały stan oraz odtworzenie po restarcie.
 
+Checkpoint A dodaje natywne środowisko pamięci: foldery, dokumenty Markdown, frontmatter, tagi, nagłówki, wikilinki, backlinki, przypięcia, ulubione, kosz, niezmienne rewizje i lokalne wyszukiwanie SQLite FTS5. Dokumenty są własnością NEUROSA-HB i nie wymagają Obsidiana.
+
 ## Wymagania
 
 - Node.js 24 lub nowszy,
@@ -61,6 +63,8 @@ Opcja `--json` zwraca stabilny wynik maszynowy. Polecenie `formatuj` przyjmuje `
 Każda aktywacja posiada limit skoków, minimalną siłę impulsu, limit zdarzeń, limit czasu, wykrywanie cykli i możliwość anulowania. Impulsy przechodzą wyłącznie przez synapsy zapisane w skompilowanym IR.
 
 Ledger jest uporządkowany, tylko do dopisywania, połączony skrótami SHA-256 i przechowywany razem ze stanem runtime’u w SQLite. Metoda `verifyLedger()` wykrywa zmianę payloadu, usunięcie lub przestawienie zdarzenia oraz nieprawidłowe `previousHash` i `eventHash`.
+
+Storage jest ukryty za interfejsami repozytoriów i korzysta ze stabilnego `better-sqlite3`, WAL, foreign keys oraz jawnych migracji. Migracja schema v1 → v2 zachowuje dotychczasowy stan runtime’u i ledger.
 
 ## Walidacja
 

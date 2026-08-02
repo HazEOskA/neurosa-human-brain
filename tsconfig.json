@@ -27,6 +27,8 @@
       "@neurosa/storage": ["packages/neurosa-storage/src/index.ts"],
       "@neurosa/activation": ["packages/neurosa-activation/src/index.ts"],
       "@neurosa/neural-runtime": ["packages/neurosa-runtime/src/index.ts"],
+      "@neurosa/document-domain": ["packages/neurosa-document-domain/src/index.ts"],
+      "@neurosa/workspace": ["packages/neurosa-workspace/src/index.ts"],
       "@neurosa/domain": ["packages/brain-domain/src/index.ts"],
       "@neurosa/ledger": ["packages/event-ledger/src/index.ts"],
       "@neurosa/runtime": ["packages/neural-runtime/src/index.ts"],

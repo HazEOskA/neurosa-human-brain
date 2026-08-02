@@ -10,6 +10,9 @@ importers:
       "@eslint/js":
         specifier: 9.39.2
         version: 9.39.2
+      "@types/better-sqlite3":
+        specifier: 9.6.0
+        version: 9.6.0
       "@types/node":
         specifier: 26.1.2
         version: 26.1.2
@@ -19,6 +22,9 @@ importers:
       "@types/react-dom":
         specifier: 19.2.4
         version: 19.2.4(@types/react@19.2.18)
+      better-sqlite3:
+        specifier: 13.0.2
+        version: 13.0.2
       eslint:
         specifier: 9.39.2
         version: 9.39.2
@@ -103,6 +109,8 @@ importers:
         specifier: workspace:*
         version: link:../neurosa-type-checker
 
+  packages/neurosa-document-domain: {}
+
   packages/neurosa-event-ledger:
     dependencies:
       "@neurosa/runtime-domain":
@@ -159,6 +167,9 @@ importers:
 
   packages/neurosa-storage:
     dependencies:
+      "@neurosa/document-domain":
+        specifier: workspace:*
+        version: link:../neurosa-document-domain
       "@neurosa/event-ledger":
         specifier: workspace:*
         version: link:../neurosa-event-ledger
@@ -168,12 +179,25 @@ importers:
       "@neurosa/runtime-domain":
         specifier: workspace:*
         version: link:../neurosa-runtime-domain
+      better-sqlite3:
+        specifier: 13.0.2
+        version: 13.0.2
+    devDependencies:
+      "@types/better-sqlite3":
+        specifier: 9.6.0
+        version: 9.6.0
 
   packages/neurosa-type-checker:
     dependencies:
       "@neurosa/ast":
         specifier: workspace:*
         version: link:../neurosa-ast
+
+  packages/neurosa-workspace:
+    dependencies:
+      "@neurosa/document-domain":
+        specifier: workspace:*
+        version: link:../neurosa-document-domain
 
   packages/shared-config: {}
 
@@ -1079,6 +1103,12 @@ packages:
         integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==,
       }
 
+  "@types/better-sqlite3@9.6.0":
+    resolution:
+      {
+        integrity: sha512-ZEEwBSgMu7GYJOynoagg5X9JbxfL6dTJDsgViJIqh67jV44kyOr9RXfmFjLK5rzC4MWssP06t9hu/JwGDnUbCg==,
+      }
+
   "@types/chai@5.2.3":
     resolution:
       {
@@ -1324,6 +1354,13 @@ packages:
       }
     engines: { node: ">=6.0.0" }
     hasBin: true
+
+  better-sqlite3@13.0.2:
+    resolution:
+      {
+        integrity: sha512-jW6oufeDhXZaiX9Lw5A+oerVClx4iFrI6uDj1zu7SqUAjak9vbJvA0NEcKLNxHiQHb6kYCoFzzXYV0YOauhV3g==,
+      }
+    engines: { node: ">=22" }
 
   brace-expansion@1.1.18:
     resolution:
@@ -1910,6 +1947,13 @@ packages:
         optional: true
       sass:
         optional: true
+
+  node-addon-api@8.9.1:
+    resolution:
+      {
+        integrity: sha512-4eUQWVPCUUUiBjLnHS3cXWeC6ryoPUc0U3rP7IuzapoGbzMqd/r6KKO0clr0b+snQhsrueFEhCZDdK+LK7hxKg==,
+      }
+    engines: { node: ^18 || ^20 || >= 21 }
 
   obug@2.1.4:
     resolution:
@@ -2731,6 +2775,10 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
+  "@types/better-sqlite3@9.6.0":
+    dependencies:
+      "@types/node": 26.1.2
+
   "@types/chai@5.2.3":
     dependencies:
       "@types/deep-eql": 4.0.2
@@ -2912,6 +2960,10 @@ snapshots:
   balanced-match@4.0.4: {}
 
   baseline-browser-mapping@2.11.10: {}
+
+  better-sqlite3@13.0.2:
+    dependencies:
+      node-addon-api: 8.9.1
 
   brace-expansion@1.1.18:
     dependencies:
@@ -3243,6 +3295,8 @@ snapshots:
     transitivePeerDependencies:
       - "@babel/core"
       - babel-plugin-macros
+
+  node-addon-api@8.9.1: {}
 
   obug@2.1.4: {}
 
