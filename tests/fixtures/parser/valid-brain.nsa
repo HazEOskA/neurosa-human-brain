@@ -1,0 +1,24 @@
+brain OsaBrain {
+  region ProjectMemory {
+    neuron BrainArchitecture {
+      type: decision
+      source: obsidian("projects/brain.md")
+      threshold: 0.72
+      restingPotential: -0.65
+      salience: 0.90
+      enabled: true
+    }
+
+    neuron HydraLab {
+      type: system
+      source: obsidian("projects/hydra-lab.md")
+      threshold: 0.61
+    }
+
+    synapse BrainArchitecture -> HydraLab {
+      relation: PART_OF
+      mode: EXCITATORY
+      weight: 0.64
+    }
+  }
+}
