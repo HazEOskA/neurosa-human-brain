@@ -1,0 +1,24 @@
+import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
+
+const root = fileURLToPath(new URL(".", import.meta.url));
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      "@neurosa/ast": `${root}packages/neurosa-ast/src/index.ts`,
+      "@neurosa/lexer": `${root}packages/neurosa-lexer/src/index.ts`,
+      "@neurosa/parser": `${root}packages/neurosa-parser/src/index.ts`,
+      "@neurosa/semantic-analysis": `${root}packages/neurosa-semantic-analysis/src/index.ts`,
+      "@neurosa/ir": `${root}packages/neurosa-ir/src/index.ts`,
+      "@neurosa/compiler": `${root}packages/neurosa-compiler/src/index.ts`,
+      "@neurosa/domain": `${root}packages/brain-domain/src/index.ts`,
+      "@neurosa/ledger": `${root}packages/event-ledger/src/index.ts`,
+      "@neurosa/runtime": `${root}packages/neural-runtime/src/index.ts`,
+      "@neurosa/obsidian": `${root}packages/obsidian-adapter/src/index.ts`,
+      "@neurosa/api-contracts": `${root}packages/brain-api-contracts/src/index.ts`,
+      "@neurosa/api": `${root}packages/brain-api/src/index.ts`,
+    },
+  },
+  test: { globals: true, include: ["tests/**/*.test.ts"] },
+});
