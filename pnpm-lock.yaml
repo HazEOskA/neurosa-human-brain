@@ -56,6 +56,15 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
 
+  packages/neurosa-activation:
+    dependencies:
+      "@neurosa/event-ledger":
+        specifier: workspace:*
+        version: link:../neurosa-event-ledger
+      "@neurosa/runtime-domain":
+        specifier: workspace:*
+        version: link:../neurosa-runtime-domain
+
   packages/neurosa-ast: {}
 
   packages/neurosa-cli:
@@ -66,9 +75,15 @@ importers:
       "@neurosa/compiler":
         specifier: workspace:*
         version: link:../neurosa-compiler
+      "@neurosa/neural-runtime":
+        specifier: workspace:*
+        version: link:../neurosa-runtime
       "@neurosa/parser":
         specifier: workspace:*
         version: link:../neurosa-parser
+      "@neurosa/storage":
+        specifier: workspace:*
+        version: link:../neurosa-storage
 
   packages/neurosa-compiler:
     dependencies:
@@ -87,6 +102,12 @@ importers:
       "@neurosa/type-checker":
         specifier: workspace:*
         version: link:../neurosa-type-checker
+
+  packages/neurosa-event-ledger:
+    dependencies:
+      "@neurosa/runtime-domain":
+        specifier: workspace:*
+        version: link:../neurosa-runtime-domain
 
   packages/neurosa-ir:
     dependencies:
@@ -109,11 +130,44 @@ importers:
         specifier: workspace:*
         version: link:../neurosa-lexer
 
+  packages/neurosa-runtime:
+    dependencies:
+      "@neurosa/activation":
+        specifier: workspace:*
+        version: link:../neurosa-activation
+      "@neurosa/event-ledger":
+        specifier: workspace:*
+        version: link:../neurosa-event-ledger
+      "@neurosa/ir":
+        specifier: workspace:*
+        version: link:../neurosa-ir
+      "@neurosa/runtime-domain":
+        specifier: workspace:*
+        version: link:../neurosa-runtime-domain
+
+  packages/neurosa-runtime-domain:
+    dependencies:
+      "@neurosa/ir":
+        specifier: workspace:*
+        version: link:../neurosa-ir
+
   packages/neurosa-semantic-analysis:
     dependencies:
       "@neurosa/ast":
         specifier: workspace:*
         version: link:../neurosa-ast
+
+  packages/neurosa-storage:
+    dependencies:
+      "@neurosa/event-ledger":
+        specifier: workspace:*
+        version: link:../neurosa-event-ledger
+      "@neurosa/ir":
+        specifier: workspace:*
+        version: link:../neurosa-ir
+      "@neurosa/runtime-domain":
+        specifier: workspace:*
+        version: link:../neurosa-runtime-domain
 
   packages/neurosa-type-checker:
     dependencies:

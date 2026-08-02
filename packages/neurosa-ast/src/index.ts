@@ -88,7 +88,7 @@ export interface Diagnostic {
 
 export function formatDiagnostic(diagnostic: Diagnostic): string {
   const { file, start } = diagnostic.span;
-  return `${diagnostic.code}: ${diagnostic.message}\nat ${file}:${start.line}:${start.column}`;
+  return `${diagnostic.code}: ${diagnostic.message}\nw ${file}:${start.line}:${start.column}`;
 }
 
 export class NeurosaDiagnosticError extends Error {

@@ -13,6 +13,8 @@
   "dependencies": {
     "@neurosa/ast": "workspace:*",
     "@neurosa/compiler": "workspace:*",
-    "@neurosa/parser": "workspace:*"
+    "@neurosa/neural-runtime": "workspace:*",
+    "@neurosa/parser": "workspace:*",
+    "@neurosa/storage": "workspace:*"
   }
 }

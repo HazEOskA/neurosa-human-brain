@@ -90,7 +90,14 @@ function scalarValue(value: PropertyValueNode): string | number | boolean | unde
 }
 
 function expectedType(schema: PropertySchema): string {
-  return schema.kind === "enum" ? "enum identifier" : schema.kind;
+  const names: Readonly<Record<PropertyKind, string>> = {
+    number: "liczbą",
+    string: "tekstem",
+    boolean: "wartością logiczną",
+    obsidian: "odwołaniem obsidian",
+    enum: "identyfikatorem enum",
+  };
+  return names[schema.kind];
 }
 
 function checkProperty(
@@ -103,7 +110,7 @@ function checkProperty(
       diagnostics.push(
         error(
           "NEUROSA-E305",
-          `Property '${property.name.name}' must be obsidian("path")`,
+          `Właściwość '${property.name.name}' musi mieć postać obsidian("ścieżka")`,
           property,
         ),
       );
@@ -118,7 +125,7 @@ function checkProperty(
     diagnostics.push(
       error(
         "NEUROSA-E305",
-        `Property '${property.name.name}' must be ${expectedType(schema)}`,
+        `Właściwość '${property.name.name}' musi być ${expectedType(schema)}`,
         property,
       ),
     );
@@ -131,7 +138,7 @@ function checkProperty(
       diagnostics.push(
         error(
           "NEUROSA-E308",
-          `Invalid enum value '${String(value)}' for property '${property.name.name}'`,
+          `Nieprawidłowa wartość enum '${String(value)}' dla właściwości '${property.name.name}'`,
           property,
         ),
       );
@@ -148,7 +155,7 @@ function checkProperty(
     diagnostics.push(
       error(
         schema.rangeCode ?? "NEUROSA-E311",
-        `Property '${property.name.name}' must be within ${range}; received ${numericValue}`,
+        `Właściwość '${property.name.name}' musi mieścić się w zakresie ${range}; otrzymano ${numericValue}`,
         property,
       ),
     );
@@ -166,7 +173,7 @@ function checkMember(
       diagnostics.push(
         error(
           "NEUROSA-E307",
-          `Unsupported ${member.kind.toLowerCase()} property '${property.name.name}'`,
+          `Nieobsługiwana właściwość ${member.kind === "Neuron" ? "neuronu" : "synapsy"} '${property.name.name}'`,
           property,
         ),
       );

@@ -10,8 +10,8 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "check": "node --import tsx packages/neurosa-cli/src/cli.ts check examples/minimal-brain/brain.nsa",
-    "compile": "node --import tsx packages/neurosa-cli/src/cli.ts compile examples/minimal-brain/brain.nsa",
+    "check": "node --import tsx packages/neurosa-cli/src/cli.ts sprawdz examples/minimal-brain/brain.nsa",
+    "compile": "node --import tsx packages/neurosa-cli/src/cli.ts kompiluj examples/minimal-brain/brain.nsa",
     "dev:web": "pnpm --filter @neurosa/brain-web dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

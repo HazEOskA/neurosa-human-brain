@@ -98,14 +98,14 @@ describe("NEUROSA-HB lexer and parser", () => {
 
   it("reports unexpected characters as lexer diagnostics", () => {
     expect(() => parse("brain B { @ }", "bad-character.nsa")).toThrowError(
-      /NEUROSA-L001: Unexpected character '@'/u,
+      /NEUROSA-L001: Nieoczekiwany znak '@'/u,
     );
   });
 
   it("rejects unknown source functions", () => {
     const source = `brain B { region R { neuron N { source: remote("note.md") } } }`;
     expect(() => parse(source, "unknown-source.nsa")).toThrowError(
-      /NEUROSA-P105: Unknown source function 'remote'/u,
+      /NEUROSA-P105: Nieznana funkcja źródłowa 'remote'/u,
     );
   });
 });

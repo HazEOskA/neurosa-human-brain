@@ -123,7 +123,7 @@ export function lex(source: string, file = "<memory>"): LexResult {
         }
       }
       if (!terminated) {
-        report("NEUROSA-L002", "Unterminated string literal", start);
+        report("NEUROSA-L002", "Niedomknięty literał tekstowy", start);
       } else {
         push("STRING", start, startOffset, value);
       }
@@ -143,7 +143,7 @@ export function lex(source: string, file = "<memory>"): LexResult {
       const lexeme = source.slice(startOffset, offset);
       const value = Number(lexeme);
       if (!Number.isFinite(value)) {
-        report("NEUROSA-L003", `Invalid number '${lexeme}'`, start);
+        report("NEUROSA-L003", `Nieprawidłowa liczba '${lexeme}'`, start);
       } else {
         push("NUMBER", start, startOffset, value);
       }
@@ -158,7 +158,7 @@ export function lex(source: string, file = "<memory>"): LexResult {
     }
 
     advance();
-    report("NEUROSA-L001", `Unexpected character '${character}'`, start);
+    report("NEUROSA-L001", `Nieoczekiwany znak '${character}'`, start);
   }
 
   const eof = position();

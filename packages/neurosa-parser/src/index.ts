@@ -27,29 +27,29 @@ class Parser {
 
   parseProgram(): ProgramNode {
     const brain = this.parseBrain();
-    const eof = this.expect("EOF", "Expected end of file after brain declaration");
+    const eof = this.expect("EOF", "Oczekiwano końca pliku po deklaracji brain");
     return { kind: "Program", brain, span: mergeSpan(brain.span, eof.span) };
   }
 
   private parseBrain(): BrainNode {
     const keyword = this.expectKeyword("brain");
-    const id = this.parseIdentifier("Expected brain identifier");
-    this.expect("LBRACE", "Expected '{' after brain identifier");
+    const id = this.parseIdentifier("Oczekiwano identyfikatora brain");
+    this.expect("LBRACE", "Oczekiwano '{' po identyfikatorze brain");
     const regions: RegionNode[] = [];
     while (!this.check("RBRACE") && !this.check("EOF")) {
       if (!this.checkKeyword("region")) {
-        this.fail("NEUROSA-P102", "Expected region declaration inside brain");
+        this.fail("NEUROSA-P102", "Oczekiwano deklaracji region wewnątrz brain");
       }
       regions.push(this.parseRegion());
     }
-    const close = this.expect("RBRACE", "Expected '}' to close brain declaration");
+    const close = this.expect("RBRACE", "Oczekiwano '}' zamykającego deklarację brain");
     return { kind: "Brain", id, regions, span: mergeSpan(keyword.span, close.span) };
   }
 
   private parseRegion(): RegionNode {
     const keyword = this.expectKeyword("region");
-    const id = this.parseIdentifier("Expected region identifier");
-    this.expect("LBRACE", "Expected '{' after region identifier");
+    const id = this.parseIdentifier("Oczekiwano identyfikatora region");
+    this.expect("LBRACE", "Oczekiwano '{' po identyfikatorze region");
     const members: RegionMemberNode[] = [];
     while (!this.check("RBRACE") && !this.check("EOF")) {
       if (this.checkKeyword("neuron")) {
@@ -57,16 +57,16 @@ class Parser {
       } else if (this.checkKeyword("synapse")) {
         members.push(this.parseSynapse());
       } else {
-        this.fail("NEUROSA-P103", "Expected neuron or synapse declaration inside region");
+        this.fail("NEUROSA-P103", "Oczekiwano deklaracji neuron albo synapse wewnątrz region");
       }
     }
-    const close = this.expect("RBRACE", "Expected '}' to close region declaration");
+    const close = this.expect("RBRACE", "Oczekiwano '}' zamykającego deklarację region");
     return { kind: "Region", id, members, span: mergeSpan(keyword.span, close.span) };
   }
 
   private parseNeuron(): NeuronNode {
     const keyword = this.expectKeyword("neuron");
-    const id = this.parseIdentifier("Expected neuron identifier");
+    const id = this.parseIdentifier("Oczekiwano identyfikatora neuron");
     const properties = this.parsePropertyBlock("neuron");
     return {
       kind: "Neuron",
@@ -78,9 +78,9 @@ class Parser {
 
   private parseSynapse(): SynapseNode {
     const keyword = this.expectKeyword("synapse");
-    const source = this.parseIdentifier("Expected source neuron identifier");
-    this.expect("ARROW", "Expected '->' between synapse endpoints");
-    const target = this.parseIdentifier("Expected target neuron identifier");
+    const source = this.parseIdentifier("Oczekiwano identyfikatora neuronu źródłowego");
+    this.expect("ARROW", "Oczekiwano '->' pomiędzy końcami synapsy");
+    const target = this.parseIdentifier("Oczekiwano identyfikatora neuronu docelowego");
     const properties = this.parsePropertyBlock("synapse");
     return {
       kind: "Synapse",
@@ -92,19 +92,19 @@ class Parser {
   }
 
   private parsePropertyBlock(owner: string): PropertyNode[] {
-    this.expect("LBRACE", `Expected '{' before ${owner} properties`);
+    this.expect("LBRACE", `Oczekiwano '{' przed właściwościami ${owner}`);
     const properties: PropertyNode[] = [];
     while (!this.check("RBRACE") && !this.check("EOF")) {
       properties.push(this.parseProperty());
       this.match("COMMA");
     }
-    this.expect("RBRACE", `Expected '}' to close ${owner} properties`);
+    this.expect("RBRACE", `Oczekiwano '}' zamykającego właściwości ${owner}`);
     return properties;
   }
 
   private parseProperty(): PropertyNode {
-    const name = this.parseIdentifier("Expected property name");
-    this.expect("COLON", `Expected ':' after property '${name.name}'`);
+    const name = this.parseIdentifier("Oczekiwano nazwy właściwości");
+    this.expect("COLON", `Oczekiwano ':' po właściwości '${name.name}'`);
     const value = this.parsePropertyValue();
     return { kind: "Property", name, value, span: mergeSpan(name.span, value.span) };
   }
@@ -124,19 +124,19 @@ class Parser {
         return this.parseObsidianSource(token);
       }
       if (this.check("LPAREN")) {
-        this.fail("NEUROSA-P105", `Unknown source function '${token.lexeme}'`, token);
+        this.fail("NEUROSA-P105", `Nieznana funkcja źródłowa '${token.lexeme}'`, token);
       }
       const value =
         token.lexeme === "true" ? true : token.lexeme === "false" ? false : token.lexeme;
       return this.scalar(token, value);
     }
-    this.fail("NEUROSA-P104", 'Expected scalar property value or obsidian("path")');
+    this.fail("NEUROSA-P104", 'Oczekiwano wartości skalarnej albo obsidian("ścieżka")');
   }
 
   private parseObsidianSource(callee: Token): ObsidianSourceNode {
-    this.expect("LPAREN", "Expected '(' after obsidian");
-    const path = this.expect("STRING", "Expected a quoted path in obsidian()");
-    this.expect("RPAREN", "Expected ')' after Obsidian path");
+    this.expect("LPAREN", "Oczekiwano '(' po obsidian");
+    const path = this.expect("STRING", "Oczekiwano ścieżki w cudzysłowie wewnątrz obsidian()");
+    this.expect("RPAREN", "Oczekiwano ')' po ścieżce Obsidian");
     return {
       kind: "ObsidianSource",
       path: path.value as string,
@@ -155,7 +155,7 @@ class Parser {
 
   private expectKeyword(keyword: string): Token {
     if (!this.checkKeyword(keyword)) {
-      this.fail("NEUROSA-P101", `Expected '${keyword}'`);
+      this.fail("NEUROSA-P101", `Oczekiwano '${keyword}'`);
     }
     return this.advance();
   }
@@ -187,13 +187,16 @@ class Parser {
 
   private peek(): Token {
     const token = this.tokens[this.current];
-    if (token === undefined) throw new Error("Parser invariant violated: token stream has no EOF");
+    if (token === undefined) {
+      throw new Error("Naruszono niezmiennik parsera: strumień tokenów nie zawiera EOF");
+    }
     return token;
   }
 
   private previous(): Token {
     const token = this.tokens[Math.max(0, this.current - 1)];
-    if (token === undefined) throw new Error("Parser invariant violated: no previous token");
+    if (token === undefined)
+      throw new Error("Naruszono niezmiennik parsera: brak poprzedniego tokenu");
     return token;
   }
 

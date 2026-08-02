@@ -38,7 +38,11 @@ function validateDuplicateProperties(
   for (const property of member.properties) {
     if (properties.has(property.name.name)) {
       diagnostics.push(
-        error("NEUROSA-E206", `Duplicate property '${property.name.name}'`, property.name.span),
+        error(
+          "NEUROSA-E206",
+          `Zduplikowana właściwość '${property.name.name}'`,
+          property.name.span,
+        ),
       );
     } else {
       properties.add(property.name.name);
@@ -55,7 +59,9 @@ export function analyzePrograms(programs: readonly ProgramNode[]): SemanticAnaly
   for (const program of programs) {
     const brain = program.brain;
     if (brains.has(brain.id.name)) {
-      diagnostics.push(error("NEUROSA-E201", `Duplicate brain '${brain.id.name}'`, brain.id.span));
+      diagnostics.push(
+        error("NEUROSA-E201", `Zduplikowany brain '${brain.id.name}'`, brain.id.span),
+      );
     } else {
       brains.set(brain.id.name, brain);
     }
@@ -64,7 +70,7 @@ export function analyzePrograms(programs: readonly ProgramNode[]): SemanticAnaly
       const key = regionKey(brain.id.name, region.id.name);
       if (regions.has(key)) {
         diagnostics.push(
-          error("NEUROSA-E202", `Duplicate region '${region.id.name}'`, region.id.span),
+          error("NEUROSA-E202", `Zduplikowany region '${region.id.name}'`, region.id.span),
         );
       } else {
         regions.set(key, region);
@@ -77,7 +83,7 @@ export function analyzePrograms(programs: readonly ProgramNode[]): SemanticAnaly
         const key = neuronKey(brain.id.name, member.id.name);
         if (neurons.has(key)) {
           diagnostics.push(
-            error("NEUROSA-E203", `Duplicate neuron '${member.id.name}'`, member.id.span),
+            error("NEUROSA-E203", `Zduplikowany neuron '${member.id.name}'`, member.id.span),
           );
         } else {
           neurons.set(key, member);
@@ -96,7 +102,7 @@ export function analyzePrograms(programs: readonly ProgramNode[]): SemanticAnaly
           diagnostics.push(
             error(
               "NEUROSA-E104",
-              `Unknown source neuron '${member.source.name}'`,
+              `Nieznany neuron źródłowy '${member.source.name}'`,
               member.source.span,
             ),
           );
@@ -105,7 +111,7 @@ export function analyzePrograms(programs: readonly ProgramNode[]): SemanticAnaly
           diagnostics.push(
             error(
               "NEUROSA-E105",
-              `Unknown target neuron '${member.target.name}'`,
+              `Nieznany neuron docelowy '${member.target.name}'`,
               member.target.span,
             ),
           );
