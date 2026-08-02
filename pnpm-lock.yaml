@@ -58,6 +58,42 @@ importers:
 
   packages/neurosa-ast: {}
 
+  packages/neurosa-cli:
+    dependencies:
+      "@neurosa/ast":
+        specifier: workspace:*
+        version: link:../neurosa-ast
+      "@neurosa/compiler":
+        specifier: workspace:*
+        version: link:../neurosa-compiler
+      "@neurosa/parser":
+        specifier: workspace:*
+        version: link:../neurosa-parser
+
+  packages/neurosa-compiler:
+    dependencies:
+      "@neurosa/ast":
+        specifier: workspace:*
+        version: link:../neurosa-ast
+      "@neurosa/ir":
+        specifier: workspace:*
+        version: link:../neurosa-ir
+      "@neurosa/parser":
+        specifier: workspace:*
+        version: link:../neurosa-parser
+      "@neurosa/semantic-analysis":
+        specifier: workspace:*
+        version: link:../neurosa-semantic-analysis
+      "@neurosa/type-checker":
+        specifier: workspace:*
+        version: link:../neurosa-type-checker
+
+  packages/neurosa-ir:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   packages/neurosa-lexer:
     dependencies:
       "@neurosa/ast":
@@ -72,6 +108,18 @@ importers:
       "@neurosa/lexer":
         specifier: workspace:*
         version: link:../neurosa-lexer
+
+  packages/neurosa-semantic-analysis:
+    dependencies:
+      "@neurosa/ast":
+        specifier: workspace:*
+        version: link:../neurosa-ast
+
+  packages/neurosa-type-checker:
+    dependencies:
+      "@neurosa/ast":
+        specifier: workspace:*
+        version: link:../neurosa-ast
 
   packages/shared-config: {}
 

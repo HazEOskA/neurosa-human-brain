@@ -1,0 +1,17 @@
+{
+  "name": "@neurosa/compiler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit -p ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@neurosa/ast": "workspace:*",
+    "@neurosa/ir": "workspace:*",
+    "@neurosa/parser": "workspace:*",
+    "@neurosa/semantic-analysis": "workspace:*",
+    "@neurosa/type-checker": "workspace:*"
+  }
+}
