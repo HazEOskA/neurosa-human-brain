@@ -19,7 +19,19 @@ jobs:
 
       - name: Złóż i zweryfikuj paczkę odbudowy
         run: |
-          cat .recovery/checkpoint-b/chunk-*.b64 > /tmp/checkpoint-b.tar.gz.b64
+          cat \
+            .recovery/checkpoint-b/chunk-00.b64 \
+            .recovery/checkpoint-b/chunk-01-0.b64 \
+            .recovery/checkpoint-b/chunk-01-1.b64 \
+            .recovery/checkpoint-b/chunk-01-2.b64 \
+            .recovery/checkpoint-b/chunk-01-3.b64 \
+            .recovery/checkpoint-b/chunk-02.b64 \
+            .recovery/checkpoint-b/chunk-03.b64 \
+            .recovery/checkpoint-b/chunk-04.b64 \
+            .recovery/checkpoint-b/chunk-05.b64 \
+            .recovery/checkpoint-b/chunk-06.b64 \
+            > /tmp/checkpoint-b.tar.gz.b64
+          test "$(wc -c < /tmp/checkpoint-b.tar.gz.b64)" = "23000"
           base64 --decode /tmp/checkpoint-b.tar.gz.b64 > /tmp/checkpoint-b.tar.gz
           echo "e375cce1551a6dd07ac58c8bc58ef35531b5703bbd7f2aff229ec5f78ce50f39  /tmp/checkpoint-b.tar.gz" | sha256sum -c -
           tar -tzf /tmp/checkpoint-b.tar.gz
@@ -110,17 +122,19 @@ jobs:
           cp /tmp/checkpoint-b-validation.log /tmp/dowody/ 2>/dev/null || true
           cp /tmp/checkpoint-b-commit.txt /tmp/dowody/ 2>/dev/null || true
           cp /tmp/checkpoint-b-tree.txt /tmp/dowody/ 2>/dev/null || true
-          tar -czf /tmp/dowody/checkpoint-b-validated-source.tar.gz \
-            README.md \
-            docs/NEUROSA_HB_OBSIDIAN_IMPORT.md \
-            packages/neurosa-cli/src/index.ts \
-            packages/neurosa-runtime-domain/src/index.ts \
-            packages/neurosa-storage/package.json \
-            packages/neurosa-storage/src/obsidian-import.ts \
-            tests/import/obsidian-import.test.ts \
-            tsconfig.json \
-            vitest.config.ts
-          sha256sum /tmp/dowody/checkpoint-b-validated-source.tar.gz > /tmp/dowody/SHA256SUMS
+          if test -f packages/neurosa-storage/src/obsidian-import.ts; then
+            tar -czf /tmp/dowody/checkpoint-b-validated-source.tar.gz \
+              README.md \
+              docs/NEUROSA_HB_OBSIDIAN_IMPORT.md \
+              packages/neurosa-cli/src/index.ts \
+              packages/neurosa-runtime-domain/src/index.ts \
+              packages/neurosa-storage/package.json \
+              packages/neurosa-storage/src/obsidian-import.ts \
+              tests/import/obsidian-import.test.ts \
+              tsconfig.json \
+              vitest.config.ts
+            sha256sum /tmp/dowody/checkpoint-b-validated-source.tar.gz > /tmp/dowody/SHA256SUMS
+          fi
 
       - name: Opublikuj dowody walidacji
         if: always()
