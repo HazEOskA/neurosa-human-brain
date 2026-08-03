@@ -42,6 +42,33 @@ jobs:
           git checkout --detach 1feb4d30f939969126a999fd1a48791fe165b631
           git clean -fdx
           tar -xzf /tmp/checkpoint-c.tar.gz
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("packages/neurosa-brain-api/src/index.ts")
+          source = path.read_text(encoding="utf-8")
+          old = '''    const chunks: Buffer[] = [];
+    let size = 0;
+    for await (const chunk of request) {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+'''
+          new = '''    const chunks: Buffer<ArrayBufferLike>[] = [];
+    let size = 0;
+    for await (const chunk of request) {
+      const raw: unknown = chunk;
+      if (!(raw instanceof Uint8Array)) {
+        throw new ApiProblem(
+          400,
+          "NIEPRAWIDŁOWY_PAYLOAD",
+          "Fragment żądania ma nieprawidłowy format",
+        );
+      }
+      const buffer = Buffer.from(raw);
+'''
+          if source.count(old) != 1:
+              raise SystemExit("Nie znaleziono dokładnie jednego bloku odczytu payloadu")
+          path.write_text(source.replace(old, new), encoding="utf-8")
+          PY
 
       - name: Włącz pnpm
         uses: pnpm/action-setup@v4
