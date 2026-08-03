@@ -19,7 +19,17 @@ jobs:
 
       - name: Złóż i zweryfikuj paczkę Checkpointu C
         run: |
-          cat .recovery/checkpoint-c/chunk-*.b64 > /tmp/checkpoint-c.tar.gz.b64
+          cat \
+            .recovery/checkpoint-c/chunk-00.b64 \
+            .recovery/checkpoint-c/chunk-01.b64 \
+            .recovery/checkpoint-c/chunk-02.b64 \
+            .recovery/checkpoint-c/chunk-03.b64 \
+            .recovery/checkpoint-c/chunk-04-0.b64 \
+            .recovery/checkpoint-c/chunk-04-1.b64 \
+            .recovery/checkpoint-c/chunk-04-2.b64 \
+            .recovery/checkpoint-c/chunk-04-3.b64 \
+            .recovery/checkpoint-c/chunk-05.b64 \
+            > /tmp/checkpoint-c.tar.gz.b64
           test "$(wc -c < /tmp/checkpoint-c.tar.gz.b64)" = "15284"
           base64 --decode /tmp/checkpoint-c.tar.gz.b64 > /tmp/checkpoint-c.tar.gz
           echo "a3c1fe1525edf9b3673fc1fd556935a7f11c3a33756550d5bce8f8f343cc829c  /tmp/checkpoint-c.tar.gz" | sha256sum -c -
