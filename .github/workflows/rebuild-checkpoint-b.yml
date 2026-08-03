@@ -43,6 +43,16 @@ jobs:
           git checkout --detach ab7dca3484f6488373008c5f608ccadd1a347391
           git clean -fdx
           tar -xzf /tmp/checkpoint-b.tar.gz
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("packages/neurosa-storage/src/obsidian-import.ts")
+          source = path.read_text(encoding="utf-8")
+          old = "attachment!.attachmentId"
+          if source.count(old) != 1:
+              raise SystemExit("Nie znaleziono dokładnie jednego zbędnego rzutowania attachment!")
+          path.write_text(source.replace(old, "attachment.attachmentId"), encoding="utf-8")
+          PY
 
       - name: Włącz pnpm
         uses: pnpm/action-setup@v4
@@ -74,7 +84,7 @@ jobs:
 
       - name: Zablokuj nieoczekiwane zmiany
         run: |
-          git diff --name-only | grep -Ev '^(README\.md|docs/NEUROSA_HB_OBSIDIAN_IMPORT\.md|packages/neurosa-cli/src/index\.ts|packages/neurosa-runtime-domain/src/index\.ts|packages/neurosa-storage/package\.json|packages/neurosa-storage/src/obsidian-import\.ts|tests/import/obsidian-import\.test\.ts|tsconfig\.json|vitest\.config\.ts)$' > /tmp/nieoczekiwane.txt || true
+          git diff --name-only | grep -Ev '^(README\.md|docs/NEUROSA_HB_OBSIDIAN_IMPORT\.md|packages/neurosa-cli/src/index\.ts|packages/neurosa-runtime-domain/src/index\.ts|packages/neurosa-storage/package\.json|packages/neurosa-storage/src/obsidian-import\.ts|tests/import/obsidian-import\.test\.ts|tsconfig\.json|vitest.config\.ts)$' > /tmp/nieoczekiwane.txt || true
           test ! -s /tmp/nieoczekiwane.txt || { cat /tmp/nieoczekiwane.txt; exit 1; }
 
       - name: Pełna walidacja Checkpointu B
