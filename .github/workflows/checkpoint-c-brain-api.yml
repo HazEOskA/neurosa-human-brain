@@ -65,6 +65,7 @@ jobs:
         run: |
           pnpm exec prettier --write \
             package.json \
+            pnpm-lock.yaml \
             tsconfig.json \
             vitest.config.ts \
             docs/NEUROSA_HB_BRAIN_API.md \
