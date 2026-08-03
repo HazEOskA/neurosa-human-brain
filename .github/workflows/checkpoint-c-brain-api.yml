@@ -1,3 +1,4 @@
+# Aktualny znacznik walidacji: poprawka bezpiecznego odczytu payloadu
 name: walidacja-checkpointu-c-brain-api
 
 on:
