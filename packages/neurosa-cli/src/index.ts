@@ -12,6 +12,7 @@ import {
 import type { NeurosaRuntime as NeurosaRuntimeClass } from "@neurosa/neural-runtime";
 import { parse } from "@neurosa/parser";
 import type { SqliteRuntimeRepository as SqliteRuntimeRepositoryClass } from "@neurosa/storage";
+import type { ObsidianOneTimeImporter as ObsidianOneTimeImporterClass } from "@neurosa/storage/obsidian-import";
 
 export interface CliIO {
   readonly stdout: (message: string) => void;
@@ -44,6 +45,7 @@ export function usage(): string {
   return [
     "Użycie:",
     "  neurosa <polecenie> <plik.nsa> [opcje]",
+    "  neurosa importuj obsidian <ścieżka-vault> [opcje]",
     "",
     "Polecenia:",
     "  parsuj      Utwórz i pokaż AST",
@@ -52,6 +54,15 @@ export function usage(): string {
     "  zbadaj      Pokaż podsumowanie programu",
     "  formatuj    Sformatuj źródło; użyj --zapisz, aby nadpisać plik",
     "  uruchom     Uruchom ograniczoną aktywację neuronalną",
+    "  importuj    Skopiuj dane z Obsidiana do natywnej pamięci NEUROSA-HB",
+    "",
+    "Opcje importu:",
+    "  --stan <plik>                 Baza SQLite",
+    "  --workspace <katalog>         Natywny katalog skopiowanych danych",
+    "  --brain <id>                  Identyfikator mózgu importu",
+    "  --maks-plik-bajtow <liczba>   Limit rozmiaru notatki Markdown",
+    "  --maks-zalacznik-bajtow <liczba> Limit rozmiaru załącznika",
+    "  --json                        Stabilny raport maszynowy",
   ].join("\n");
 }
 
@@ -69,7 +80,7 @@ function numberOption(
   const raw = optionValue(options, name);
   if (raw === undefined) return fallback;
   const value = Number(raw);
-  if (!Number.isFinite(value) || (integer && !Number.isInteger(value))) {
+  if (!Number.isFinite(value) || value < 0 || (integer && !Number.isInteger(value))) {
     throw new Error(`Opcja ${name} wymaga poprawnej ${integer ? "liczby całkowitej" : "liczby"}`);
   }
   return value;
@@ -78,7 +89,7 @@ function numberOption(
 function operatorError(error: unknown, file: string): string {
   if (error instanceof NeurosaDiagnosticError) return error.message;
   if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-    return `Nie znaleziono pliku '${file}'`;
+    return `Nie znaleziono pliku lub katalogu '${file}'`;
   }
   if (error instanceof Error && /SQLITE|SQLite/u.test(error.message)) {
     return "Błąd bazy stanu SQLite";
@@ -107,7 +118,82 @@ async function loadRuntimeModules(): Promise<{
   }
 }
 
+async function loadImporterModules(): Promise<{
+  ObsidianOneTimeImporter: typeof ObsidianOneTimeImporterClass;
+  SqliteRuntimeRepository: typeof SqliteRuntimeRepositoryClass;
+}> {
+  const [importerModule, storageModule] = await Promise.all([
+    import("@neurosa/storage/obsidian-import"),
+    import("@neurosa/storage"),
+  ]);
+  return {
+    ObsidianOneTimeImporter: importerModule.ObsidianOneTimeImporter,
+    SqliteRuntimeRepository: storageModule.SqliteRuntimeRepository,
+  };
+}
+
+async function runObsidianImport(argv: readonly string[], io: CliIO): Promise<number> {
+  const [, sourceType, vaultValue, ...options] = argv;
+  if (sourceType !== "obsidian" || vaultValue === undefined) {
+    io.stderr(usage());
+    return 2;
+  }
+  const vaultPath = resolve(vaultValue);
+  const statePath = resolve(optionValue(options, "--stan") ?? ".neurosa/brain.db");
+  const workspacePath = resolve(optionValue(options, "--workspace") ?? ".neurosa/workspace");
+  const brainId = optionValue(options, "--brain") ?? "ObsidianImportBrain";
+  const { ObsidianOneTimeImporter, SqliteRuntimeRepository } = await loadImporterModules();
+  const repository = new SqliteRuntimeRepository(statePath);
+  try {
+    const importer = new ObsidianOneTimeImporter(repository);
+    const report = await importer.import({
+      vaultPath,
+      workspacePath,
+      brainId,
+      maxNoteSizeBytes: numberOption(options, "--maks-plik-bajtow", 2 * 1024 * 1024, true),
+      maxAttachmentSizeBytes: numberOption(
+        options,
+        "--maks-zalacznik-bajtow",
+        25 * 1024 * 1024,
+        true,
+      ),
+    });
+    if (options.includes("--json")) {
+      io.stdout(JSON.stringify(report, null, 2));
+    } else {
+      io.stdout(
+        [
+          `Import zakończony: ${report.importId}`,
+          `Mózg: ${report.brainId}`,
+          `Dokumenty: ${String(report.documentCount)}`,
+          `Załączniki: ${String(report.attachmentCount)}`,
+          `Neurony: ${String(report.neuronCount)}`,
+          `Synapsy: ${String(report.synapseCount)}`,
+          `Nierozwiązane wikilinki: ${String(report.unresolvedLinks.length)}`,
+          `Ostrzeżenia: ${String(report.warnings.length)}`,
+          `Skrót źródła SHA-256: ${report.sourceHash}`,
+          `Raport: ${report.reportPath}`,
+          `Baza stanu: ${statePath}`,
+          `Natywny workspace: ${workspacePath}`,
+        ].join("\n"),
+      );
+    }
+    return 0;
+  } finally {
+    repository.close();
+  }
+}
+
 export async function runCli(argv: readonly string[], io: CliIO = defaultIO): Promise<number> {
+  if (argv[0] === "importuj" || argv[0] === "import") {
+    try {
+      return await runObsidianImport(argv, io);
+    } catch (error: unknown) {
+      io.stderr(operatorError(error, argv[2] ?? "Vault Obsidiana"));
+      return 1;
+    }
+  }
+
   const [commandValue, fileValue, ...options] = argv;
   const command = commandValue === undefined ? undefined : commandAliases[commandValue];
   if (command === undefined || fileValue === undefined) {

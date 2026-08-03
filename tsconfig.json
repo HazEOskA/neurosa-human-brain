@@ -25,6 +25,7 @@
       "@neurosa/runtime-domain": ["packages/neurosa-runtime-domain/src/index.ts"],
       "@neurosa/event-ledger": ["packages/neurosa-event-ledger/src/index.ts"],
       "@neurosa/storage": ["packages/neurosa-storage/src/index.ts"],
+      "@neurosa/storage/obsidian-import": ["packages/neurosa-storage/src/obsidian-import.ts"],
       "@neurosa/activation": ["packages/neurosa-activation/src/index.ts"],
       "@neurosa/neural-runtime": ["packages/neurosa-runtime/src/index.ts"],
       "@neurosa/document-domain": ["packages/neurosa-document-domain/src/index.ts"],

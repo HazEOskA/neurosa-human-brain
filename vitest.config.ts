@@ -16,6 +16,7 @@ export default defineConfig({
       "@neurosa/cli": `${root}packages/neurosa-cli/src/index.ts`,
       "@neurosa/runtime-domain": `${root}packages/neurosa-runtime-domain/src/index.ts`,
       "@neurosa/event-ledger": `${root}packages/neurosa-event-ledger/src/index.ts`,
+      "@neurosa/storage/obsidian-import": `${root}packages/neurosa-storage/src/obsidian-import.ts`,
       "@neurosa/storage": `${root}packages/neurosa-storage/src/index.ts`,
       "@neurosa/activation": `${root}packages/neurosa-activation/src/index.ts`,
       "@neurosa/neural-runtime": `${root}packages/neurosa-runtime/src/index.ts`,

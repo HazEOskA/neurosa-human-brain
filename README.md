@@ -14,6 +14,8 @@ Runtime obsługuje neurony, rzeczywiste synapsy pobudzające i hamujące, ograni
 
 Checkpoint A dodaje natywne środowisko pamięci: foldery, dokumenty Markdown, frontmatter, tagi, nagłówki, wikilinki, backlinki, przypięcia, ulubione, kosz, niezmienne rewizje i lokalne wyszukiwanie SQLite FTS5. Dokumenty są własnością NEUROSA-HB i nie wymagają Obsidiana.
 
+Checkpoint B dodaje jednorazowy, tylko do odczytu importer Obsidiana. Kopiuje notatki i bezpieczne załączniki do natywnego workspace, tworzy neurony oraz rzeczywiste synapsy z wikilinków, zapisuje raport i zdarzenia ledgeru. Po imporcie źródłowy Vault nie jest potrzebny.
+
 ## Wymagania
 
 - Node.js 24 lub nowszy,
@@ -30,6 +32,7 @@ pnpm install
 ```text
 Użycie:
   neurosa <polecenie> <plik.nsa> [opcje]
+  neurosa importuj obsidian <ścieżka-vault> [opcje]
 
 Polecenia:
   parsuj
@@ -38,9 +41,21 @@ Polecenia:
   zbadaj
   formatuj
   uruchom
+  importuj
 ```
 
-Techniczne aliasy `parse`, `check`, `compile`, `inspect`, `format`, `run` pozostają dostępne dla kompatybilności. Komunikaty operatora pozostają po polsku.
+Techniczne aliasy `parse`, `check`, `compile`, `inspect`, `format`, `run`, `import` pozostają dostępne dla kompatybilności. Komunikaty operatora pozostają po polsku.
+
+### Jednorazowy import danych z Obsidiana
+
+```bash
+node --import tsx packages/neurosa-cli/src/cli.ts importuj obsidian ./MojVault \
+  --stan .neurosa/brain.db \
+  --workspace .neurosa/workspace \
+  --brain MojMozg
+```
+
+Importer nie modyfikuje Vaultu. Szczegóły kontraktu i zabezpieczeń opisuje [dokument importu](docs/NEUROSA_HB_OBSIDIAN_IMPORT.md).
 
 ### Uruchomienie aktywacji
 
