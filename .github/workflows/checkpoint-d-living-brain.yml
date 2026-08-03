@@ -1,0 +1,159 @@
+name: walidacja-checkpointu-d-living-brain
+
+on:
+  pull_request:
+    branches:
+      - build/neurosa-hb-v0.1
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobierz gałąź kontrolną
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Złóż i zweryfikuj paczkę Checkpointu D
+        run: |
+          cat .recovery/checkpoint-d/chunk-*.b64 > /tmp/checkpoint-d.tar.gz.b64
+          test "$(wc -c < /tmp/checkpoint-d.tar.gz.b64)" = "22364"
+          base64 --decode /tmp/checkpoint-d.tar.gz.b64 > /tmp/checkpoint-d.tar.gz
+          echo "5376ec26b8c086503f48cf5aac6e10bda8f70acf872e82191c735de343330741  /tmp/checkpoint-d.tar.gz" | sha256sum -c -
+          tar -tzf /tmp/checkpoint-d.tar.gz
+
+      - name: Przygotuj czysty Checkpoint C
+        run: |
+          git fetch origin build/neurosa-hb-v0.1
+          test "$(git rev-parse origin/build/neurosa-hb-v0.1)" = "b0fc8527f41e5908ae68a59802c0ad87bda511a7"
+          git checkout --detach b0fc8527f41e5908ae68a59802c0ad87bda511a7
+          git clean -fdx
+          tar -xzf /tmp/checkpoint-d.tar.gz
+
+      - name: Włącz pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Ustaw Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Uaktualnij lockfile aplikacji 3D
+        run: pnpm install --lockfile-only
+
+      - name: Instalacja zamrożonych zależności
+        run: pnpm install --frozen-lockfile
+
+      - name: Formatuj wyłącznie pliki Checkpointu D
+        run: |
+          pnpm exec prettier --write \
+            package.json \
+            pnpm-lock.yaml \
+            tsconfig.json \
+            vitest.config.ts \
+            docs/NEUROSA_HB_LIVING_BRAIN_3D.md \
+            packages/neurosa-brain-visualization/package.json \
+            packages/neurosa-brain-visualization/src/index.ts \
+            apps/brain-web/package.json \
+            apps/brain-web/tsconfig.json \
+            apps/brain-web/next-env.d.ts \
+            apps/brain-web/next.config.ts \
+            apps/brain-web/app/layout.tsx \
+            apps/brain-web/app/page.tsx \
+            apps/brain-web/app/globals.css \
+            apps/brain-web/components/living-brain-workspace.tsx \
+            tests/ui/brain-visualization.test.ts \
+            tests/localization/polish-ui.test.ts
+
+      - name: Zablokuj nieoczekiwane zmiany
+        run: |
+          git diff --name-only | grep -Ev '^(package\.json|pnpm-lock\.yaml|tsconfig\.json|vitest\.config\.ts|docs/NEUROSA_HB_LIVING_BRAIN_3D\.md|packages/neurosa-brain-visualization/package\.json|packages/neurosa-brain-visualization/src/index\.ts|apps/brain-web/package\.json|apps/brain-web/tsconfig\.json|apps/brain-web/next-env\.d\.ts|apps/brain-web/next\.config\.ts|apps/brain-web/app/layout\.tsx|apps/brain-web/app/page\.tsx|apps/brain-web/app/globals\.css|apps/brain-web/components/living-brain-workspace\.tsx|tests/ui/brain-visualization\.test\.ts|tests/localization/polish-ui\.test\.ts)$' > /tmp/nieoczekiwane.txt || true
+          test ! -s /tmp/nieoczekiwane.txt || { cat /tmp/nieoczekiwane.txt; exit 1; }
+
+      - name: Pełna walidacja Checkpointu D
+        run: |
+          set -o pipefail
+          {
+            pnpm format:check
+            pnpm lint
+            pnpm typecheck
+            pnpm test
+            pnpm check
+            pnpm compile
+            pnpm build
+            pnpm smoke
+          } 2>&1 | tee /tmp/checkpoint-d-validation.log
+
+      - name: Smoke serwera Żywego Mózgu
+        run: |
+          set -euo pipefail
+          pnpm --filter @neurosa/brain-web exec next start --hostname 127.0.0.1 --port 3000 > /tmp/brain-web.log 2>&1 &
+          WEB_PID=$!
+          trap 'kill "$WEB_PID" 2>/dev/null || true' EXIT
+          for proba in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3000 > /tmp/brain-web.html; then
+              break
+            fi
+            sleep 0.25
+          done
+          grep -q "Żywy mózg agentów" /tmp/brain-web.html
+          grep -q "Uruchom test mózgu" /tmp/brain-web.html
+
+      - name: Utwórz pojedynczy commit Checkpointu D
+        run: |
+          git config user.name "OsaTechGPT Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            package.json \
+            pnpm-lock.yaml \
+            tsconfig.json \
+            vitest.config.ts \
+            docs/NEUROSA_HB_LIVING_BRAIN_3D.md \
+            packages/neurosa-brain-visualization \
+            apps/brain-web \
+            tests/ui/brain-visualization.test.ts \
+            tests/localization/polish-ui.test.ts
+          git commit -m "feat: dodaj Żywy Mózg 3D oparty na eventach runtime'u"
+          git rev-parse HEAD | tee /tmp/checkpoint-d-commit.txt
+          git rev-parse HEAD^{tree} | tee /tmp/checkpoint-d-tree.txt
+
+      - name: Opublikuj wyłącznie fast-forward
+        run: |
+          git fetch origin build/neurosa-hb-v0.1
+          test "$(git rev-parse origin/build/neurosa-hb-v0.1)" = "b0fc8527f41e5908ae68a59802c0ad87bda511a7"
+          git push origin HEAD:build/neurosa-hb-v0.1
+
+      - name: Zapisz dowody
+        if: always()
+        run: |
+          mkdir -p /tmp/dowody
+          cp /tmp/checkpoint-d-validation.log /tmp/dowody/ 2>/dev/null || true
+          cp /tmp/checkpoint-d-commit.txt /tmp/dowody/ 2>/dev/null || true
+          cp /tmp/checkpoint-d-tree.txt /tmp/dowody/ 2>/dev/null || true
+          cp /tmp/brain-web.log /tmp/dowody/ 2>/dev/null || true
+          cp /tmp/brain-web.html /tmp/dowody/ 2>/dev/null || true
+          if test -f apps/brain-web/components/living-brain-workspace.tsx; then
+            tar -czf /tmp/dowody/checkpoint-d-validated-source.tar.gz \
+              package.json pnpm-lock.yaml tsconfig.json vitest.config.ts \
+              docs/NEUROSA_HB_LIVING_BRAIN_3D.md \
+              packages/neurosa-brain-visualization \
+              apps/brain-web \
+              tests/ui/brain-visualization.test.ts \
+              tests/localization/polish-ui.test.ts
+            sha256sum /tmp/dowody/checkpoint-d-validated-source.tar.gz > /tmp/dowody/SHA256SUMS
+          fi
+
+      - name: Opublikuj dowody walidacji
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neurosa-checkpoint-d-validation
+          path: /tmp/dowody/
+          if-no-files-found: warn
