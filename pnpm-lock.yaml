@@ -73,6 +73,21 @@ importers:
 
   packages/neurosa-ast: {}
 
+  packages/neurosa-brain-api:
+    dependencies:
+      "@neurosa/document-domain":
+        specifier: workspace:*
+        version: link:../neurosa-document-domain
+      "@neurosa/neural-runtime":
+        specifier: workspace:*
+        version: link:../neurosa-runtime
+      "@neurosa/runtime-domain":
+        specifier: workspace:*
+        version: link:../neurosa-runtime-domain
+      "@neurosa/workspace":
+        specifier: workspace:*
+        version: link:../neurosa-workspace
+
   packages/neurosa-cli:
     dependencies:
       "@neurosa/ast":

@@ -1,0 +1,16 @@
+{
+  "name": "@neurosa/brain-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit -p ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@neurosa/document-domain": "workspace:*",
+    "@neurosa/neural-runtime": "workspace:*",
+    "@neurosa/runtime-domain": "workspace:*",
+    "@neurosa/workspace": "workspace:*"
+  }
+}

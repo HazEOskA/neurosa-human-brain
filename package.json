@@ -9,6 +9,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "brain:api": "node --import tsx apps/brain-api/src/server.ts",
     "build": "turbo run build",
     "check": "node --import tsx packages/neurosa-cli/src/cli.ts sprawdz examples/minimal-brain/brain.nsa",
     "compile": "node --import tsx packages/neurosa-cli/src/cli.ts kompiluj examples/minimal-brain/brain.nsa",
