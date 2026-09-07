@@ -6,6 +6,7 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      "@neurosa/brain-visualization": `${root}packages/neurosa-brain-visualization/src/index.ts`,
       "@neurosa/connect/tools": `${root}packages/neurosa-connect/src/tools.ts`,
       "@neurosa/connect": `${root}packages/neurosa-connect/src/index.ts`,
       "@neurosa/ingest": `${root}packages/neurosa-ingest/src/index.ts`,

@@ -1,0 +1,23 @@
+{
+  "name": "@neurosa/brain-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --hostname 127.0.0.1",
+    "start": "next start --hostname 127.0.0.1"
+  },
+  "dependencies": {
+    "@neurosa/brain-visualization": "workspace:*",
+    "@react-three/drei": "10.7.7",
+    "@react-three/fiber": "9.6.1",
+    "next": "16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/three": "0.185.1"
+  }
+}

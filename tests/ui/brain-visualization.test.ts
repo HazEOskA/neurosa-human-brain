@@ -1,0 +1,245 @@
+import {
+  applyBrainEvent,
+  createBrainScene,
+  EMPTY_VISUAL_STATE,
+  eventStreamUrl,
+  mergeDynamicSynapses,
+  parseSseFrames,
+  type BrainEventView,
+  type BrainNeuronView,
+  type BrainSynapseView,
+} from "@neurosa/brain-visualization";
+
+const neurons: BrainNeuronView[] = [
+  {
+    id: "Start",
+    regionId: "Pamięć",
+    activationLevel: 0,
+    threshold: 0.5,
+    salience: 1,
+    confidence: 1,
+    enabled: true,
+  },
+  {
+    id: "Cel",
+    regionId: "Pamięć",
+    activationLevel: 0,
+    threshold: 0.5,
+    salience: 0.7,
+    confidence: 1,
+    enabled: true,
+  },
+];
+
+const synapses: BrainSynapseView[] = [
+  {
+    id: "s-1",
+    sourceNeuronId: "Start",
+    targetNeuronId: "Cel",
+    mode: "EXCITATORY",
+    weight: 0.8,
+    confidence: 0.9,
+    enabled: true,
+  },
+];
+
+function event(
+  sequence: number,
+  eventType: string,
+  payload: unknown,
+  eventId = "e-" + String(sequence),
+): BrainEventView {
+  return {
+    eventId,
+    sequence,
+    eventType,
+    activationId: "a-1",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    payload,
+  };
+}
+
+describe("model wizualizacji żywego mózgu", () => {
+  it("tworzy deterministyczne pozycje neuronów", () => {
+    expect(createBrainScene(neurons, synapses)).toEqual(createBrainScene(neurons, synapses));
+  });
+
+  it("renderuje wyłącznie synapsy z istniejącymi końcami", () => {
+    const scene = createBrainScene(neurons, [
+      ...synapses,
+      { ...synapses[0]!, id: "fałszywa", targetNeuronId: "Brak" },
+    ]);
+    expect(scene.synapses.map((entry) => entry.id)).toEqual(["s-1"]);
+    expect(scene.rejectedSynapseIds).toEqual(["fałszywa"]);
+  });
+
+  it("brak eventu oznacza brak światła i impulsu", () => {
+    expect(EMPTY_VISUAL_STATE.neuronEffects).toEqual({});
+    expect(EMPTY_VISUAL_STATE.synapseEffects).toEqual({});
+    expect(EMPTY_VISUAL_STATE.impulses).toEqual({});
+  });
+
+  it("NEURON_ACTIVATED podświetla dokładnie wskazany neuron", () => {
+    const state = applyBrainEvent(
+      EMPTY_VISUAL_STATE,
+      event(1, "NEURON_ACTIVATED", { neuronId: "Start", activationLevel: 0.72 }),
+    );
+    expect(state.neuronEffects.Start?.intensity).toBe(0.72);
+    expect(state.neuronEffects.Cel).toBeUndefined();
+  });
+
+  it("NEURON_FIRED tworzy mocny impuls światła", () => {
+    const state = applyBrainEvent(
+      EMPTY_VISUAL_STATE,
+      event(1, "NEURON_FIRED", { neuronId: "Start", activationLevel: 1 }),
+    );
+    expect(state.neuronEffects.Start).toMatchObject({ intensity: 1, fired: true });
+  });
+
+  it("NEURON_INHIBITED używa odrębnego stanu hamowania", () => {
+    const state = applyBrainEvent(
+      EMPTY_VISUAL_STATE,
+      event(1, "NEURON_INHIBITED", { neuronId: "Cel", delta: -0.4 }),
+    );
+    expect(state.neuronEffects.Cel).toMatchObject({ inhibited: true, intensity: 0.4 });
+  });
+
+  it("SYNAPSE_ACTIVATED podświetla tylko synapsę wskazaną eventem", () => {
+    const state = applyBrainEvent(
+      EMPTY_VISUAL_STATE,
+      event(1, "SYNAPSE_ACTIVATED", { synapseId: "s-1", strength: 0.64 }),
+    );
+    expect(state.synapseEffects["s-1"]?.intensity).toBe(0.64);
+    expect(Object.keys(state.synapseEffects)).toHaveLength(1);
+  });
+
+  it("IMPULSE_CREATED wymaga realnej synapsy i obu końców", () => {
+    const ignored = applyBrainEvent(
+      EMPTY_VISUAL_STATE,
+      event(1, "IMPULSE_CREATED", {
+        impulse: {
+          id: "seed",
+          sourceNeuronId: null,
+          targetNeuronId: "Start",
+          synapseId: null,
+          strength: 1,
+          mode: "EXCITATORY",
+        },
+      }),
+    );
+    expect(ignored.impulses).toEqual({});
+
+    const state = applyBrainEvent(
+      ignored,
+      event(2, "IMPULSE_CREATED", {
+        impulse: {
+          id: "i-1",
+          sourceNeuronId: "Start",
+          targetNeuronId: "Cel",
+          synapseId: "s-1",
+          strength: 0.8,
+          mode: "EXCITATORY",
+        },
+      }),
+    );
+    expect(state.impulses["i-1"]).toMatchObject({ synapseId: "s-1", delivered: false });
+  });
+
+  it("IMPULSE_DELIVERED aktualizuje właściwy impuls", () => {
+    const created = applyBrainEvent(
+      EMPTY_VISUAL_STATE,
+      event(1, "IMPULSE_CREATED", {
+        impulse: {
+          id: "i-1",
+          sourceNeuronId: "Start",
+          targetNeuronId: "Cel",
+          synapseId: "s-1",
+          strength: 0.8,
+          mode: "EXCITATORY",
+        },
+      }),
+    );
+    const delivered = applyBrainEvent(
+      created,
+      event(2, "IMPULSE_DELIVERED", {
+        impulse: {
+          id: "i-1",
+          sourceNeuronId: "Start",
+          targetNeuronId: "Cel",
+          synapseId: "s-1",
+          strength: 0.8,
+          mode: "EXCITATORY",
+        },
+      }),
+    );
+    expect(delivered.impulses["i-1"]?.delivered).toBe(true);
+    expect(delivered.impulses["i-1"]?.synapseId).toBe("s-1");
+  });
+
+  it("nie przetwarza drugi raz tego samego eventu", () => {
+    const first = applyBrainEvent(
+      EMPTY_VISUAL_STATE,
+      event(1, "NEURON_ACTIVATED", { neuronId: "Start", activationLevel: 0.4 }),
+    );
+    expect(applyBrainEvent(first, event(1, "NEURON_ACTIVATED", { neuronId: "Cel" }))).toBe(first);
+  });
+
+  it("SYNAPSE_FORMED tworzy dynamiczne połączenie", () => {
+    const state = applyBrainEvent(
+      EMPTY_VISUAL_STATE,
+      event(1, "SYNAPSE_FORMED", {
+        synapse: {
+          id: "s-2",
+          sourceNeuronId: "Cel",
+          targetNeuronId: "Start",
+          mode: "INHIBITORY",
+          weight: 0.4,
+          confidence: 0.8,
+        },
+      }),
+    );
+    const merged = mergeDynamicSynapses(synapses, state);
+    expect(merged.map((entry) => entry.id)).toEqual(["s-1", "s-2"]);
+    expect(createBrainScene(neurons, merged).synapses).toHaveLength(2);
+  });
+
+  it("pruning usuwa dynamiczne połączenie", () => {
+    const formed = applyBrainEvent(
+      EMPTY_VISUAL_STATE,
+      event(1, "SYNAPSE_FORMED", {
+        synapse: {
+          id: "s-2",
+          sourceNeuronId: "Cel",
+          targetNeuronId: "Start",
+          mode: "EXCITATORY",
+        },
+      }),
+    );
+    const pruned = applyBrainEvent(formed, event(2, "SYNAPSE_PRUNED", { synapseId: "s-2" }));
+    expect(pruned.dynamicSynapses["s-2"]).toBeUndefined();
+  });
+
+  it("parser SSE zachowuje niepełną ramkę na kolejne dane", () => {
+    const full = [
+      "id: e-1",
+      "event: NEURON_FIRED",
+      "data: " + JSON.stringify(event(1, "NEURON_FIRED", { neuronId: "Start" })),
+      "",
+      "id: e-2",
+    ].join("\n");
+    const parsed = parseSseFrames(full);
+    expect(parsed.events).toHaveLength(1);
+    expect(parsed.events[0]?.eventType).toBe("NEURON_FIRED");
+    expect(parsed.rest).toBe("id: e-2");
+  });
+
+  it("uszkodzona ramka SSE nie tworzy fikcyjnej aktywacji", () => {
+    expect(parseSseFrames("event: NEURON_FIRED\ndata: {nie-json}\n\n").events).toEqual([]);
+  });
+
+  it("wznawia stream od ostatniej sekwencji", () => {
+    expect(eventStreamUrl("http://127.0.0.1:8644/", 17)).toBe(
+      "http://127.0.0.1:8644/api/v1/brain/events/stream?afterSequence=17",
+    );
+  });
+});

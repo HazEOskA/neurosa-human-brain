@@ -40,7 +40,8 @@
       "@neurosa/workspace/knowledge": ["packages/neurosa-workspace/src/knowledge.ts"],
       "@neurosa/connect": ["packages/neurosa-connect/src/index.ts"],
       "@neurosa/connect/tools": ["packages/neurosa-connect/src/tools.ts"],
-      "@neurosa/ingest": ["packages/neurosa-ingest/src/index.ts"]
+      "@neurosa/ingest": ["packages/neurosa-ingest/src/index.ts"],
+      "@neurosa/brain-visualization": ["packages/neurosa-brain-visualization/src/index.ts"]
     },
     "types": ["node", "vitest/globals"]
   },
@@ -51,5 +52,5 @@
     "tests/**/*.ts",
     "examples/**/*.ts"
   ],
-  "exclude": ["**/.next/**", "**/node_modules/**", "**/dist/**"]
+  "exclude": ["**/.next/**", "**/node_modules/**", "**/dist/**", "apps/brain-web/**"]
 }
