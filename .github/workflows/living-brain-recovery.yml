@@ -1,4 +1,4 @@
-name: Living Brain Recovery
+name: Living Brain Recovery — finalize
 
 on:
   push:
@@ -11,95 +11,48 @@ permissions:
   contents: write
 
 jobs:
-  recover:
+  finalize:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - name: Checkout recovery branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Reconstruct and verify Checkpoint D
-        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm install --global pnpm@11.7.0
+      - name: Zaktualizuj lockfile Living Brain
+        run: pnpm install --lockfile-only
+      - name: Sformatuj wyłącznie zakres recovery
         run: |
-          set -euo pipefail
-          OLD=400d0b5b7a6daf16315dc41cc464aa8976eb12f6
-          ROOT=/tmp/neurosa-living-brain-recovery
-          mkdir -p "$ROOT/chunks" "$ROOT/src"
-
-          git cat-file -e "$OLD^{commit}"
-
-          for n in 00 01 03 04 05 06 07; do
-            git show "$OLD:.recovery/checkpoint-d/chunk-$n.b64" > "$ROOT/chunks/chunk-$n.b64"
-          done
-          git show "$OLD:.recovery/checkpoint-d/chunk-02.b64" > "$ROOT/chunks/chunk-02.corrupt.b64"
-
-          test "$(wc -c < "$ROOT/chunks/chunk-02.corrupt.b64")" = "6000"
-          test "$(wc -c < "$ROOT/chunks/chunk-03.b64")" = "3000"
-          cmp <(tail -c 3000 "$ROOT/chunks/chunk-02.corrupt.b64") "$ROOT/chunks/chunk-03.b64"
-          head -c 3000 "$ROOT/chunks/chunk-02.corrupt.b64" > "$ROOT/chunks/chunk-02.b64"
-
-          cat             "$ROOT/chunks/chunk-00.b64"             "$ROOT/chunks/chunk-01.b64"             "$ROOT/chunks/chunk-02.b64"             "$ROOT/chunks/chunk-03.b64"             "$ROOT/chunks/chunk-04.b64"             "$ROOT/chunks/chunk-05.b64"             "$ROOT/chunks/chunk-06.b64"             "$ROOT/chunks/chunk-07.b64"             > "$ROOT/checkpoint-d.base.b64"
-
-          test "$(wc -c < "$ROOT/checkpoint-d.base.b64")" = "22363"
-          cp "$ROOT/checkpoint-d.base.b64" "$ROOT/checkpoint-d.truncated.b64"
-          printf '=' >> "$ROOT/checkpoint-d.truncated.b64"
-          base64 --decode "$ROOT/checkpoint-d.truncated.b64" > "$ROOT/checkpoint-d.truncated.tar.gz"
-
-          EXPECTED="5376ec26b8c086503f48cf5aac6e10bda8f70acf872e82191c735de343330741"
-          ACTUAL="$(sha256sum "$ROOT/checkpoint-d.truncated.tar.gz" | awk '{print $1}')"
-          echo "historical_sha256=$EXPECTED"
-          echo "truncated_sha256=$ACTUAL"
-
-          set +e
-          gzip -dc "$ROOT/checkpoint-d.truncated.tar.gz" > "$ROOT/checkpoint-d.partial.tar"
-          GZIP_STATUS=$?
-          set -e
-          echo "gzip_status=$GZIP_STATUS"
-          test -s "$ROOT/checkpoint-d.partial.tar"
-
-          set +e
-          tar -tvf "$ROOT/checkpoint-d.partial.tar" | tee "$ROOT/tar-list.txt"
-          TAR_LIST_STATUS=${PIPESTATUS[0]}
-          tar -xf "$ROOT/checkpoint-d.partial.tar" -C "$ROOT/src"
-          TAR_EXTRACT_STATUS=$?
-          set -e
-          echo "tar_list_status=$TAR_LIST_STATUS"
-          echo "tar_extract_status=$TAR_EXTRACT_STATUS"
-          find "$ROOT/src" -type f -print | sort
-
-      - name: Salvage complete Living Brain sources
-        shell: bash
-        run: |
-          set -euo pipefail
-          SRC=/tmp/neurosa-living-brain-recovery/src
-
-          test -f "$SRC/apps/brain-web/app/globals.css"
-          test -f "$SRC/apps/brain-web/app/layout.tsx"
-          test -f "$SRC/apps/brain-web/app/page.tsx"
-          test -f "$SRC/apps/brain-web/package.json"
-          test -f "$SRC/packages/neurosa-brain-visualization/package.json"
-          test -f "$SRC/packages/neurosa-brain-visualization/src/index.ts"
-          test -f "$SRC/tests/ui/brain-visualization.test.ts"
-          test -f "$SRC/tests/localization/polish-ui.test.ts"
-
-          rm -rf apps/brain-web packages/neurosa-brain-visualization
-          mkdir -p apps packages tests/ui tests/localization
-          cp -a "$SRC/apps/brain-web" apps/
-          cp -a "$SRC/packages/neurosa-brain-visualization" packages/
-          cp "$SRC/tests/ui/brain-visualization.test.ts" tests/ui/
-          cp "$SRC/tests/localization/polish-ui.test.ts" tests/localization/
-
-          echo "=== SALVAGED FILES ==="
-          find apps/brain-web packages/neurosa-brain-visualization tests/ui tests/localization -type f -print | sort
-
-      - name: Commit forensic recovery before reconstruction
+          pnpm exec prettier --write \
+            apps/brain-web \
+            packages/neurosa-brain-visualization \
+            tests/ui/brain-visualization.test.ts \
+            tests/localization/polish-ui.test.ts \
+            docs/NEUROSA_HB_LIVING_BRAIN_3D.md \
+            tsconfig.json \
+            vitest.config.ts \
+            pnpm-lock.yaml
+      - name: Zapisz deterministyczne pliki recovery
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "OsaTechGPT Recovery"
           git config user.email "actions@users.noreply.github.com"
-          git add apps/brain-web packages/neurosa-brain-visualization tests/ui/brain-visualization.test.ts tests/localization/polish-ui.test.ts
-          git diff --cached --quiet && { echo "No salvage changes"; exit 1; }
-          git commit -m "chore: salvage Living Brain sources from damaged Checkpoint D"
+          git add \
+            apps/brain-web \
+            packages/neurosa-brain-visualization \
+            tests/ui/brain-visualization.test.ts \
+            tests/localization/polish-ui.test.ts \
+            docs/NEUROSA_HB_LIVING_BRAIN_3D.md \
+            tsconfig.json \
+            vitest.config.ts \
+            pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo "Zakres recovery jest już znormalizowany."
+            exit 0
+          fi
+          git commit -m "chore: normalize Living Brain recovery sources"
           git push origin HEAD:recovery/living-brain-3d-main
