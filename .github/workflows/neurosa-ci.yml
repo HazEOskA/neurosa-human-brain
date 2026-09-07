@@ -1,0 +1,90 @@
+name: NeurOSA — testy i kontener
+
+on:
+  push:
+    branches: [main, build/neurosa-ingest-connect]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neurosa-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Kod i integracja
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Zainstaluj pnpm zgodny z repozytorium
+        run: npm install --global pnpm@11.7.0
+      - name: Zainstaluj zamrożone zależności
+        run: pnpm install --frozen-lockfile
+      - name: Weryfikacja kodu i rzeczywistego procesu
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/neurosa-evidence
+          git rev-parse HEAD > /tmp/neurosa-evidence/commit.txt
+          git rev-parse 'HEAD^{tree}' > /tmp/neurosa-evidence/tree.txt
+          {
+            pnpm format:check
+            pnpm lint
+            pnpm typecheck
+            pnpm test
+            pnpm check
+            pnpm compile
+            pnpm build
+            pnpm smoke
+            git diff --exit-code
+          } 2>&1 | tee /tmp/neurosa-evidence/quality.log
+      - name: Zachowaj dowody
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neurosa-quality-${{ github.sha }}
+          path: /tmp/neurosa-evidence
+          if-no-files-found: warn
+
+  container:
+    name: Kontener i trwałość danych
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm install --global pnpm@11.7.0
+      - run: pnpm install --frozen-lockfile
+      - name: Zbuduj obraz dokładnie z badanego drzewa
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/neurosa-evidence
+          git rev-parse HEAD > /tmp/neurosa-evidence/commit.txt
+          git rev-parse 'HEAD^{tree}' > /tmp/neurosa-evidence/tree.txt
+          docker build --iidfile /tmp/neurosa-evidence/image-id.txt --tag neurosa:ci . 2>&1 | tee /tmp/neurosa-evidence/build.log
+      - name: Sesja, odtworzenie kontenera i awaria procesu
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm smoke:deployment docker neurosa:ci 2>&1 | tee /tmp/neurosa-evidence/container.log
+      - name: Zachowaj dowody kontenera
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neurosa-container-${{ github.sha }}
+          path: /tmp/neurosa-evidence
+          if-no-files-found: warn

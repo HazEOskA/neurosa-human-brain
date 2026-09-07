@@ -20,6 +20,8 @@ Checkpoint B dodaje jednorazowy, tylko do odczytu importer Obsidiana. Kopiuje no
 
 Connect dodaje trwałe sesje agentów, core context + retrieval oraz atomowy zapis wyników do istniejących dokumentów i ledgeru. Ingest obsługuje Drive, pliki PDF/DOCX/tekstowe i eksporty rozmów. Adapter HTTP i MCP korzystają z tego samego Brain API.
 
+CI, uruchomienie kontenera i test pamięci po odtworzeniu: [przygotowanie wdrożenia](docs/NEUROSA_DEPLOYMENT.md).
+
 Konfiguracja, przykłady, konflikty i rzeczywiste ograniczenia: [NeurOSA Connect](docs/NEUROSA_CONNECT.md). Living Brain z Checkpointu D nadal wymaga odzyskania poprawnej paczki źródłowej; nie jest częścią zweryfikowanego builda UI.
 
 ## Wymagania

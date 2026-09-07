@@ -31,7 +31,7 @@ Dodaj analogiczne rekordy Gemini, Grok i OSA. Plik z tokenami musi być dostępn
 
 Ustaw także `NEUROSA_DATABASE_PATH` i `NEUROSA_BRAIN_SOURCE`. Domyślny przykład definiuje brainId w `examples/minimal-brain/brain.nsa`; odczytaj właściwą wartość z `/api/v1/brain/status`.
 
-API nadal nasłuchuje wyłącznie na loopback. Remote HTTPS gateway, uwierzytelnienie zdalnych aplikacji i deployment nie należą do wykonanego wdrożenia. Nie można podłączyć chmurowej aplikacji do localhost użytkownika bez takiego połączenia.
+API domyślnie nasłuchuje na loopback. Jawny tryb kontenera i kontrakt trwałego dysku opisuje `NEUROSA_DEPLOYMENT.md`. Remote HTTPS gateway, uwierzytelnienie zdalnych aplikacji i deployment live wymagają osobnej konfiguracji oraz weryfikacji. Nie można podłączyć chmurowej aplikacji do localhost użytkownika bez takiego połączenia.
 
 ## Automatyczne hooki w agencie
 

@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/.turbo
+**/dist
+**/.next
+**/.env*
+**/*.db*
+.neurosa
+.recovery
+.pnpm-*
+coverage
+tests
+docs
+**/*credentials*.json
+**/*.pem
+**/*.key

@@ -78,6 +78,8 @@ export interface BrainApiOptions {
 export interface BrainApiStartOptions {
   readonly host?: string;
   readonly port?: number;
+  /** Explicit opt-in for a container/private network behind an HTTPS gateway. */
+  readonly allowRemote?: boolean;
 }
 
 export interface BrainApiAddress {
@@ -292,7 +294,12 @@ export class BrainApiServer {
   async start(options: BrainApiStartOptions = {}): Promise<BrainApiAddress> {
     if (this.address !== null) return this.address;
     const host = options.host ?? "127.0.0.1";
-    if (host !== "127.0.0.1" && host !== "::1" && host !== "localhost") {
+    if (
+      host !== "127.0.0.1" &&
+      host !== "::1" &&
+      host !== "localhost" &&
+      options.allowRemote !== true
+    ) {
       throw new Error("Brain API domyślnie może nasłuchiwać wyłącznie lokalnie");
     }
     await new Promise<void>((resolveStart, rejectStart) => {
@@ -303,7 +310,8 @@ export class BrainApiServer {
       });
     });
     const address = this.server.address() as AddressInfo;
-    this.address = { host, port: address.port, url: `http://${host}:${String(address.port)}` };
+    const urlHost = host.includes(":") ? `[${host}]` : host;
+    this.address = { host, port: address.port, url: `http://${urlHost}:${String(address.port)}` };
     return this.address;
   }
 

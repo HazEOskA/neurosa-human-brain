@@ -11,16 +11,9 @@ import { compileSource } from "@neurosa/compiler";
 import { NeurosaRuntime } from "@neurosa/neural-runtime";
 import { SqliteRuntimeRepository } from "@neurosa/storage";
 import { z } from "zod";
+import { listenOptions } from "./config.js";
 
-function numberFromEnv(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (raw === undefined) return fallback;
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < 0 || value > 65_535) {
-    throw new Error(`Zmienna ${name} musi być poprawnym numerem portu`);
-  }
-  return value;
-}
+const listen = listenOptions(process.env);
 
 function scopesFromEnv(): BrainApiScope[] {
   const raw = process.env.NEUROSA_API_SCOPES ?? "admin";
@@ -76,12 +69,9 @@ const server = new BrainApiServer(runtime, repository, {
     .filter(Boolean),
 });
 
-const address = await server.start({
-  host: "127.0.0.1",
-  port: numberFromEnv("NEUROSA_API_PORT", 8644),
-});
+const address = await server.start(listen);
 
-console.log(`NEUROSA-HB Brain API działa lokalnie: ${address.url}`);
+console.log(`NEUROSA-HB Brain API nasłuchuje: ${address.url}`);
 console.log(`Mózg: ${compilation.ir.brainId}`);
 console.log(`Baza: ${databasePath}`);
 
