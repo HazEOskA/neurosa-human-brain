@@ -40,7 +40,7 @@ jobs:
           head -c 3000 "$ROOT/chunks/chunk-02.corrupt.b64" > "$ROOT/chunks/chunk-02.b64"
 
           cat             "$ROOT/chunks/chunk-00.b64"             "$ROOT/chunks/chunk-01.b64"             "$ROOT/chunks/chunk-02.b64"             "$ROOT/chunks/chunk-03.b64"             "$ROOT/chunks/chunk-04.b64"             "$ROOT/chunks/chunk-05.b64"             "$ROOT/chunks/chunk-06.b64"             "$ROOT/chunks/chunk-07.b64"             > "$ROOT/checkpoint-d.tar.gz.b64"
-          printf '\n' >> "$ROOT/checkpoint-d.tar.gz.b64"
+          printf '=' >> "$ROOT/checkpoint-d.tar.gz.b64"
 
           test "$(wc -c < "$ROOT/checkpoint-d.tar.gz.b64")" = "22364"
           base64 --decode "$ROOT/checkpoint-d.tar.gz.b64" > "$ROOT/checkpoint-d.tar.gz"
