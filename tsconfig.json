@@ -14,35 +14,95 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@neurosa/ast": ["packages/neurosa-ast/src/index.ts"],
-      "@neurosa/lexer": ["packages/neurosa-lexer/src/index.ts"],
-      "@neurosa/parser": ["packages/neurosa-parser/src/index.ts"],
-      "@neurosa/semantic-analysis": ["packages/neurosa-semantic-analysis/src/index.ts"],
-      "@neurosa/type-checker": ["packages/neurosa-type-checker/src/index.ts"],
-      "@neurosa/ir": ["packages/neurosa-ir/src/index.ts"],
-      "@neurosa/compiler": ["packages/neurosa-compiler/src/index.ts"],
-      "@neurosa/cli": ["packages/neurosa-cli/src/index.ts"],
-      "@neurosa/runtime-domain": ["packages/neurosa-runtime-domain/src/index.ts"],
-      "@neurosa/event-ledger": ["packages/neurosa-event-ledger/src/index.ts"],
-      "@neurosa/storage": ["packages/neurosa-storage/src/index.ts"],
-      "@neurosa/storage/obsidian-import": ["packages/neurosa-storage/src/obsidian-import.ts"],
-      "@neurosa/activation": ["packages/neurosa-activation/src/index.ts"],
-      "@neurosa/neural-runtime": ["packages/neurosa-runtime/src/index.ts"],
-      "@neurosa/document-domain": ["packages/neurosa-document-domain/src/index.ts"],
-      "@neurosa/workspace": ["packages/neurosa-workspace/src/index.ts"],
-      "@neurosa/brain-api": ["packages/neurosa-brain-api/src/index.ts"],
-      "@neurosa/domain": ["packages/brain-domain/src/index.ts"],
-      "@neurosa/ledger": ["packages/event-ledger/src/index.ts"],
-      "@neurosa/runtime": ["packages/neural-runtime/src/index.ts"],
-      "@neurosa/obsidian": ["packages/obsidian-adapter/src/index.ts"],
-      "@neurosa/api-contracts": ["packages/brain-api-contracts/src/index.ts"],
-      "@neurosa/api": ["packages/brain-api/src/index.ts"],
-      "@neurosa/workspace/knowledge": ["packages/neurosa-workspace/src/knowledge.ts"],
-      "@neurosa/connect": ["packages/neurosa-connect/src/index.ts"],
-      "@neurosa/connect/tools": ["packages/neurosa-connect/src/tools.ts"],
-      "@neurosa/ingest": ["packages/neurosa-ingest/src/index.ts"]
+      "@neurosa/ast": [
+        "packages/neurosa-ast/src/index.ts"
+      ],
+      "@neurosa/lexer": [
+        "packages/neurosa-lexer/src/index.ts"
+      ],
+      "@neurosa/parser": [
+        "packages/neurosa-parser/src/index.ts"
+      ],
+      "@neurosa/semantic-analysis": [
+        "packages/neurosa-semantic-analysis/src/index.ts"
+      ],
+      "@neurosa/type-checker": [
+        "packages/neurosa-type-checker/src/index.ts"
+      ],
+      "@neurosa/ir": [
+        "packages/neurosa-ir/src/index.ts"
+      ],
+      "@neurosa/compiler": [
+        "packages/neurosa-compiler/src/index.ts"
+      ],
+      "@neurosa/cli": [
+        "packages/neurosa-cli/src/index.ts"
+      ],
+      "@neurosa/runtime-domain": [
+        "packages/neurosa-runtime-domain/src/index.ts"
+      ],
+      "@neurosa/event-ledger": [
+        "packages/neurosa-event-ledger/src/index.ts"
+      ],
+      "@neurosa/storage": [
+        "packages/neurosa-storage/src/index.ts"
+      ],
+      "@neurosa/storage/obsidian-import": [
+        "packages/neurosa-storage/src/obsidian-import.ts"
+      ],
+      "@neurosa/activation": [
+        "packages/neurosa-activation/src/index.ts"
+      ],
+      "@neurosa/neural-runtime": [
+        "packages/neurosa-runtime/src/index.ts"
+      ],
+      "@neurosa/document-domain": [
+        "packages/neurosa-document-domain/src/index.ts"
+      ],
+      "@neurosa/workspace": [
+        "packages/neurosa-workspace/src/index.ts"
+      ],
+      "@neurosa/brain-api": [
+        "packages/neurosa-brain-api/src/index.ts"
+      ],
+      "@neurosa/domain": [
+        "packages/brain-domain/src/index.ts"
+      ],
+      "@neurosa/ledger": [
+        "packages/event-ledger/src/index.ts"
+      ],
+      "@neurosa/runtime": [
+        "packages/neural-runtime/src/index.ts"
+      ],
+      "@neurosa/obsidian": [
+        "packages/obsidian-adapter/src/index.ts"
+      ],
+      "@neurosa/api-contracts": [
+        "packages/brain-api-contracts/src/index.ts"
+      ],
+      "@neurosa/api": [
+        "packages/brain-api/src/index.ts"
+      ],
+      "@neurosa/workspace/knowledge": [
+        "packages/neurosa-workspace/src/knowledge.ts"
+      ],
+      "@neurosa/connect": [
+        "packages/neurosa-connect/src/index.ts"
+      ],
+      "@neurosa/connect/tools": [
+        "packages/neurosa-connect/src/tools.ts"
+      ],
+      "@neurosa/ingest": [
+        "packages/neurosa-ingest/src/index.ts"
+      ],
+      "@neurosa/brain-visualization": [
+        "packages/neurosa-brain-visualization/src/index.ts"
+      ]
     },
-    "types": ["node", "vitest/globals"]
+    "types": [
+      "node",
+      "vitest/globals"
+    ]
   },
   "include": [
     "apps/**/*.ts",
@@ -51,5 +111,9 @@
     "tests/**/*.ts",
     "examples/**/*.ts"
   ],
-  "exclude": ["**/.next/**", "**/node_modules/**", "**/dist/**"]
+  "exclude": [
+    "**/.next/**",
+    "**/node_modules/**",
+    "**/dist/**"
+  ]
 }
