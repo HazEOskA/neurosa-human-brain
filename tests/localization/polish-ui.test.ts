@@ -8,9 +8,9 @@ const visibleFiles = [
 
 describe("polski interfejs Żywego Mózgu", () => {
   it("zawiera polskie nazwy głównych ekranów i działań", async () => {
-    const content = (
-      await Promise.all(visibleFiles.map((path) => readFile(path, "utf8")))
-    ).join("\n");
+    const content = (await Promise.all(visibleFiles.map((path) => readFile(path, "utf8")))).join(
+      "\n",
+    );
     for (const phrase of [
       "Żywy mózg agentów",
       "Adres lokalnego API",
@@ -28,9 +28,9 @@ describe("polski interfejs Żywego Mózgu", () => {
   });
 
   it("nie zawiera znanych angielskich komunikatów operatora", async () => {
-    const content = (
-      await Promise.all(visibleFiles.map((path) => readFile(path, "utf8")))
-    ).join("\n");
+    const content = (await Promise.all(visibleFiles.map((path) => readFile(path, "utf8")))).join(
+      "\n",
+    );
     expect(content).not.toMatch(
       />\s*(Connect|Disconnect|Run brain test|Brain model|Inspector panel|Runtime status|Loading|Error)\s*</u,
     );

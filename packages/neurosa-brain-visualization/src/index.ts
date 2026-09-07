@@ -114,18 +114,12 @@ function payloadRecord(payload: unknown): Readonly<Record<string, unknown>> {
     : {};
 }
 
-function stringField(
-  record: Readonly<Record<string, unknown>>,
-  field: string,
-): string | undefined {
+function stringField(record: Readonly<Record<string, unknown>>, field: string): string | undefined {
   const value = record[field];
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-function numberField(
-  record: Readonly<Record<string, unknown>>,
-  field: string,
-): number | undefined {
+function numberField(record: Readonly<Record<string, unknown>>, field: string): number | undefined {
   const value = record[field];
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
@@ -453,9 +447,5 @@ export function parseSseFrames(input: string): ParsedSseResult {
 
 export function eventStreamUrl(apiBaseUrl: string, afterSequence: number): string {
   const base = apiBaseUrl.replace(/\/+$/u, "");
-  return (
-    base +
-    "/api/v1/brain/events/stream?afterSequence=" +
-    String(Math.max(0, afterSequence))
-  );
+  return base + "/api/v1/brain/events/stream?afterSequence=" + String(Math.max(0, afterSequence));
 }

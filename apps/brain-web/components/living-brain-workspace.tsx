@@ -117,20 +117,14 @@ function BrainModel({
     () => mergeDynamicSynapses(synapses, visualState),
     [synapses, visualState],
   );
-  const scene = useMemo(
-    () => createBrainScene(neurons, mergedSynapses),
-    [neurons, mergedSynapses],
-  );
+  const scene = useMemo(() => createBrainScene(neurons, mergedSynapses), [neurons, mergedSynapses]);
   const neuronById = useMemo(
     () => new Map(scene.neurons.map((neuron) => [neuron.id, neuron])),
     [scene.neurons],
   );
 
   return (
-    <Canvas
-      camera={{ position: [0, 0.4, 6.2], fov: 48 }}
-      onPointerMissed={() => onSelect(null)}
-    >
+    <Canvas camera={{ position: [0, 0.4, 6.2], fov: 48 }} onPointerMissed={() => onSelect(null)}>
       <ambientLight intensity={0.5} />
       <pointLight position={[4, 5, 4]} intensity={12} />
       <pointLight position={[-4, -2, 2]} intensity={5} />
@@ -190,7 +184,11 @@ function BrainModel({
         ];
         const color = impulse.mode === "INHIBITORY" ? "#9a8cff" : "#ffe29a";
         return (
-          <mesh key={impulse.impulseId} position={position} scale={0.035 + impulse.strength * 0.035}>
+          <mesh
+            key={impulse.impulseId}
+            position={position}
+            scale={0.035 + impulse.strength * 0.035}
+          >
             <sphereGeometry args={[1, 12, 12]} />
             <meshBasicMaterial color={color} />
           </mesh>
@@ -274,7 +272,9 @@ export function LivingBrainWorkspace() {
     streamAbort.current?.abort();
     streamAbort.current = null;
     setConnectionStatus("rozłączono");
-    setMessage("Rozłączono. Wizualizacja pozostaje ostatnim prawdziwym stanem pobranym z runtime’u.");
+    setMessage(
+      "Rozłączono. Wizualizacja pozostaje ostatnim prawdziwym stanem pobranym z runtime’u.",
+    );
   }, []);
 
   const connect = useCallback(async () => {
@@ -291,7 +291,9 @@ export function LivingBrainWorkspace() {
         apiJson<EventsResponse>(apiBaseUrl, token, "/api/v1/brain/events?afterSequence=0"),
       ]);
 
-      const orderedEvents = [...eventData.events].sort((left, right) => left.sequence - right.sequence);
+      const orderedEvents = [...eventData.events].sort(
+        (left, right) => left.sequence - right.sequence,
+      );
       setStatus(brainStatus);
       setLedger(ledgerData);
       setNeurons(neuronData.neurons);
@@ -405,7 +407,11 @@ export function LivingBrainWorkspace() {
         >
           Połącz
         </button>
-        <button className="secondary" disabled={connectionStatus === "rozłączono"} onClick={disconnect}>
+        <button
+          className="secondary"
+          disabled={connectionStatus === "rozłączono"}
+          onClick={disconnect}
+        >
           Rozłącz
         </button>
         <button
@@ -456,31 +462,91 @@ export function LivingBrainWorkspace() {
 
         {selectedNeuron !== undefined ? (
           <dl>
-            <div><dt>typ</dt><dd>neuron</dd></div>
-            <div><dt>region</dt><dd>{selectedNeuron.regionId}</dd></div>
-            <div><dt>aktywacja</dt><dd>{selectedNeuron.activationLevel.toFixed(3)}</dd></div>
-            <div><dt>próg</dt><dd>{selectedNeuron.threshold.toFixed(3)}</dd></div>
-            <div><dt>salience</dt><dd>{selectedNeuron.salience.toFixed(3)}</dd></div>
-            <div><dt>confidence</dt><dd>{selectedNeuron.confidence.toFixed(3)}</dd></div>
-            <div><dt>odpalenia</dt><dd>{selectedNeuron.firingCount ?? 0}</dd></div>
+            <div>
+              <dt>typ</dt>
+              <dd>neuron</dd>
+            </div>
+            <div>
+              <dt>region</dt>
+              <dd>{selectedNeuron.regionId}</dd>
+            </div>
+            <div>
+              <dt>aktywacja</dt>
+              <dd>{selectedNeuron.activationLevel.toFixed(3)}</dd>
+            </div>
+            <div>
+              <dt>próg</dt>
+              <dd>{selectedNeuron.threshold.toFixed(3)}</dd>
+            </div>
+            <div>
+              <dt>salience</dt>
+              <dd>{selectedNeuron.salience.toFixed(3)}</dd>
+            </div>
+            <div>
+              <dt>confidence</dt>
+              <dd>{selectedNeuron.confidence.toFixed(3)}</dd>
+            </div>
+            <div>
+              <dt>odpalenia</dt>
+              <dd>{selectedNeuron.firingCount ?? 0}</dd>
+            </div>
           </dl>
         ) : selectedSynapse !== undefined ? (
           <dl>
-            <div><dt>typ</dt><dd>synapsa {selectedSynapse.mode.toLowerCase()}</dd></div>
-            <div><dt>źródło</dt><dd>{selectedSynapse.sourceNeuronId}</dd></div>
-            <div><dt>cel</dt><dd>{selectedSynapse.targetNeuronId}</dd></div>
-            <div><dt>waga</dt><dd>{selectedSynapse.weight.toFixed(3)}</dd></div>
-            <div><dt>confidence</dt><dd>{selectedSynapse.confidence.toFixed(3)}</dd></div>
-            <div><dt>aktywacje</dt><dd>{selectedSynapse.activationCount ?? 0}</dd></div>
+            <div>
+              <dt>typ</dt>
+              <dd>synapsa {selectedSynapse.mode.toLowerCase()}</dd>
+            </div>
+            <div>
+              <dt>źródło</dt>
+              <dd>{selectedSynapse.sourceNeuronId}</dd>
+            </div>
+            <div>
+              <dt>cel</dt>
+              <dd>{selectedSynapse.targetNeuronId}</dd>
+            </div>
+            <div>
+              <dt>waga</dt>
+              <dd>{selectedSynapse.weight.toFixed(3)}</dd>
+            </div>
+            <div>
+              <dt>confidence</dt>
+              <dd>{selectedSynapse.confidence.toFixed(3)}</dd>
+            </div>
+            <div>
+              <dt>aktywacje</dt>
+              <dd>{selectedSynapse.activationCount ?? 0}</dd>
+            </div>
           </dl>
         ) : (
           <>
-            <p>Stan runtime’u jest projekcją danych z Brain API. Kliknij element modelu, aby zobaczyć szczegóły.</p>
+            <p>
+              Stan runtime’u jest projekcją danych z Brain API. Kliknij element modelu, aby zobaczyć
+              szczegóły.
+            </p>
             <dl>
-              <div><dt>brainId</dt><dd>{status?.brainId ?? "UNKNOWN"}</dd></div>
-              <div><dt>status</dt><dd>{status?.status ?? "UNKNOWN"}</dd></div>
-              <div><dt>ledger</dt><dd>{ledger?.valid === true ? "Ledger poprawny" : ledger === null ? "UNKNOWN" : "BŁĄD"}</dd></div>
-              <div><dt>ostatni event</dt><dd>{lastEvent?.eventType ?? "brak"}</dd></div>
+              <div>
+                <dt>brainId</dt>
+                <dd>{status?.brainId ?? "UNKNOWN"}</dd>
+              </div>
+              <div>
+                <dt>status</dt>
+                <dd>{status?.status ?? "UNKNOWN"}</dd>
+              </div>
+              <div>
+                <dt>ledger</dt>
+                <dd>
+                  {ledger?.valid === true
+                    ? "Ledger poprawny"
+                    : ledger === null
+                      ? "UNKNOWN"
+                      : "BŁĄD"}
+                </dd>
+              </div>
+              <div>
+                <dt>ostatni event</dt>
+                <dd>{lastEvent?.eventType ?? "brak"}</dd>
+              </div>
             </dl>
           </>
         )}
@@ -494,7 +560,9 @@ export function LivingBrainWorkspace() {
         <div className="event-counts">
           <span>{ledger?.valid === true ? "Ledger poprawny" : "Ledger UNKNOWN / BŁĄD"}</span>
           {topCounts.map(([eventType, count]) => (
-            <span key={eventType}>{eventType} {count}</span>
+            <span key={eventType}>
+              {eventType} {count}
+            </span>
           ))}
         </div>
       </footer>
