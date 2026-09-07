@@ -58,55 +58,48 @@ jobs:
           echo "gzip_status=$GZIP_STATUS"
           test -s "$ROOT/checkpoint-d.partial.tar"
 
+          set +e
           tar -tvf "$ROOT/checkpoint-d.partial.tar" | tee "$ROOT/tar-list.txt"
+          TAR_LIST_STATUS=${PIPESTATUS[0]}
           tar -xf "$ROOT/checkpoint-d.partial.tar" -C "$ROOT/src"
+          TAR_EXTRACT_STATUS=$?
+          set -e
+          echo "tar_list_status=$TAR_LIST_STATUS"
+          echo "tar_extract_status=$TAR_EXTRACT_STATUS"
+          find "$ROOT/src" -type f -print | sort
 
-      - name: Restore only Living Brain surface
+      - name: Salvage complete Living Brain sources
         shell: bash
         run: |
           set -euo pipefail
           SRC=/tmp/neurosa-living-brain-recovery/src
 
-          test -f "$SRC/docs/NEUROSA_HB_LIVING_BRAIN_3D.md"
+          test -f "$SRC/apps/brain-web/app/globals.css"
+          test -f "$SRC/apps/brain-web/app/layout.tsx"
+          test -f "$SRC/apps/brain-web/app/page.tsx"
           test -f "$SRC/apps/brain-web/package.json"
-          test -f "$SRC/apps/brain-web/components/living-brain-workspace.tsx"
           test -f "$SRC/packages/neurosa-brain-visualization/package.json"
           test -f "$SRC/packages/neurosa-brain-visualization/src/index.ts"
           test -f "$SRC/tests/ui/brain-visualization.test.ts"
           test -f "$SRC/tests/localization/polish-ui.test.ts"
 
           rm -rf apps/brain-web packages/neurosa-brain-visualization
-          mkdir -p apps packages docs tests/ui tests/localization
+          mkdir -p apps packages tests/ui tests/localization
           cp -a "$SRC/apps/brain-web" apps/
           cp -a "$SRC/packages/neurosa-brain-visualization" packages/
-          cp "$SRC/docs/NEUROSA_HB_LIVING_BRAIN_3D.md" docs/
           cp "$SRC/tests/ui/brain-visualization.test.ts" tests/ui/
           cp "$SRC/tests/localization/polish-ui.test.ts" tests/localization/
 
-      - name: Refresh lockfile and validate recovered source
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm install --global pnpm@11.7.0
-          pnpm install --lockfile-only
-          pnpm install --frozen-lockfile
-          pnpm exec prettier --write             apps/brain-web             packages/neurosa-brain-visualization             docs/NEUROSA_HB_LIVING_BRAIN_3D.md             tests/ui/brain-visualization.test.ts             tests/localization/polish-ui.test.ts             pnpm-lock.yaml
-          pnpm format:check
-          pnpm lint
-          pnpm typecheck
-          pnpm test
-          pnpm check
-          pnpm compile
-          pnpm build
-          pnpm smoke
+          echo "=== SALVAGED FILES ==="
+          find apps/brain-web packages/neurosa-brain-visualization tests/ui tests/localization -type f -print | sort
 
-      - name: Commit recovered Living Brain
+      - name: Commit forensic recovery before reconstruction
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "OsaTechGPT Recovery"
           git config user.email "actions@users.noreply.github.com"
-          git add             apps/brain-web             packages/neurosa-brain-visualization             docs/NEUROSA_HB_LIVING_BRAIN_3D.md             tests/ui/brain-visualization.test.ts             tests/localization/polish-ui.test.ts             pnpm-lock.yaml
-          git diff --cached --exit-code && { echo "No recovery changes"; exit 1; } || true
-          git commit -m "feat: recover Living Brain 3D from verified Checkpoint D"
+          git add apps/brain-web packages/neurosa-brain-visualization tests/ui/brain-visualization.test.ts tests/localization/polish-ui.test.ts
+          git diff --cached --quiet && { echo "No salvage changes"; exit 1; }
+          git commit -m "chore: salvage Living Brain sources from damaged Checkpoint D"
           git push origin HEAD:recovery/living-brain-3d-main
