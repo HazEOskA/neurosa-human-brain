@@ -1,0 +1,16 @@
+{
+  "name": "@neurosa/neural-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit -p ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@neurosa/activation": "workspace:*",
+    "@neurosa/event-ledger": "workspace:*",
+    "@neurosa/ir": "workspace:*",
+    "@neurosa/runtime-domain": "workspace:*"
+  }
+}

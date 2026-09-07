@@ -1,0 +1,13 @@
+node_modules/
+.pnpm-store/
+.pnpm-data/
+.pnpm-cache/
+.pnpm-home/
+.turbo/
+dist/
+.next/
+coverage/
+.neurosa/
+*.db
+*.db-shm
+*.db-wal

@@ -1,0 +1,17 @@
+{
+  "name": "@neurosa/ingest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit -p ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@neurosa/connect": "workspace:*",
+    "@neurosa/document-domain": "workspace:*",
+    "zod": "4.4.3",
+    "pdf-parse": "2.4.5",
+    "mammoth": "1.12.2"
+  }
+}

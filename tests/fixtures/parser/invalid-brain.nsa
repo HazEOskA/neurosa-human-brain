@@ -1,0 +1,7 @@
+brain BrokenBrain {
+  region ProjectMemory {
+    neuron MissingColon {
+      threshold 0.72
+    }
+  }
+}

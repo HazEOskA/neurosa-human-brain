@@ -1,0 +1,14 @@
+{
+  "name": "@neurosa/activation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit -p ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@neurosa/event-ledger": "workspace:*",
+    "@neurosa/runtime-domain": "workspace:*"
+  }
+}

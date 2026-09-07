@@ -1,0 +1,23 @@
+{
+  "name": "@neurosa/storage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./obsidian-import": "./src/obsidian-import.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@neurosa/document-domain": "workspace:*",
+    "@neurosa/event-ledger": "workspace:*",
+    "@neurosa/ir": "workspace:*",
+    "@neurosa/runtime-domain": "workspace:*",
+    "better-sqlite3": "13.0.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "9.6.0"
+  }
+}
