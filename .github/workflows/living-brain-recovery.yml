@@ -1,0 +1,99 @@
+name: Living Brain Recovery
+
+on:
+  push:
+    branches:
+      - recovery/living-brain-3d-main
+    paths:
+      - .github/workflows/living-brain-recovery.yml
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout recovery branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and verify Checkpoint D
+        shell: bash
+        run: |
+          set -euo pipefail
+          OLD=400d0b5b7a6daf16315dc41cc464aa8976eb12f6
+          ROOT=/tmp/neurosa-living-brain-recovery
+          mkdir -p "$ROOT/chunks" "$ROOT/src"
+
+          git cat-file -e "$OLD^{commit}"
+
+          for n in 00 01 03 04 05 06 07; do
+            git show "$OLD:.recovery/checkpoint-d/chunk-$n.b64" > "$ROOT/chunks/chunk-$n.b64"
+          done
+          git show "$OLD:.recovery/checkpoint-d/chunk-02.b64" > "$ROOT/chunks/chunk-02.corrupt.b64"
+
+          test "$(wc -c < "$ROOT/chunks/chunk-02.corrupt.b64")" = "6000"
+          test "$(wc -c < "$ROOT/chunks/chunk-03.b64")" = "3000"
+          cmp <(tail -c 3000 "$ROOT/chunks/chunk-02.corrupt.b64") "$ROOT/chunks/chunk-03.b64"
+          head -c 3000 "$ROOT/chunks/chunk-02.corrupt.b64" > "$ROOT/chunks/chunk-02.b64"
+
+          cat             "$ROOT/chunks/chunk-00.b64"             "$ROOT/chunks/chunk-01.b64"             "$ROOT/chunks/chunk-02.b64"             "$ROOT/chunks/chunk-03.b64"             "$ROOT/chunks/chunk-04.b64"             "$ROOT/chunks/chunk-05.b64"             "$ROOT/chunks/chunk-06.b64"             "$ROOT/chunks/chunk-07.b64"             > "$ROOT/checkpoint-d.tar.gz.b64"
+          printf '\n' >> "$ROOT/checkpoint-d.tar.gz.b64"
+
+          test "$(wc -c < "$ROOT/checkpoint-d.tar.gz.b64")" = "22364"
+          base64 --decode "$ROOT/checkpoint-d.tar.gz.b64" > "$ROOT/checkpoint-d.tar.gz"
+          echo "5376ec26b8c086503f48cf5aac6e10bda8f70acf872e82191c735de343330741  $ROOT/checkpoint-d.tar.gz" | sha256sum -c -
+          tar -tzf "$ROOT/checkpoint-d.tar.gz"
+          tar -xzf "$ROOT/checkpoint-d.tar.gz" -C "$ROOT/src"
+
+      - name: Restore only Living Brain surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC=/tmp/neurosa-living-brain-recovery/src
+
+          test -f "$SRC/docs/NEUROSA_HB_LIVING_BRAIN_3D.md"
+          test -f "$SRC/apps/brain-web/package.json"
+          test -f "$SRC/apps/brain-web/components/living-brain-workspace.tsx"
+          test -f "$SRC/packages/neurosa-brain-visualization/package.json"
+          test -f "$SRC/packages/neurosa-brain-visualization/src/index.ts"
+          test -f "$SRC/tests/ui/brain-visualization.test.ts"
+          test -f "$SRC/tests/localization/polish-ui.test.ts"
+
+          rm -rf apps/brain-web packages/neurosa-brain-visualization
+          mkdir -p apps packages docs tests/ui tests/localization
+          cp -a "$SRC/apps/brain-web" apps/
+          cp -a "$SRC/packages/neurosa-brain-visualization" packages/
+          cp "$SRC/docs/NEUROSA_HB_LIVING_BRAIN_3D.md" docs/
+          cp "$SRC/tests/ui/brain-visualization.test.ts" tests/ui/
+          cp "$SRC/tests/localization/polish-ui.test.ts" tests/localization/
+
+      - name: Refresh lockfile and validate recovered source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global pnpm@11.7.0
+          pnpm install --lockfile-only
+          pnpm install --frozen-lockfile
+          pnpm exec prettier --write             apps/brain-web             packages/neurosa-brain-visualization             docs/NEUROSA_HB_LIVING_BRAIN_3D.md             tests/ui/brain-visualization.test.ts             tests/localization/polish-ui.test.ts             pnpm-lock.yaml
+          pnpm format:check
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+          pnpm check
+          pnpm compile
+          pnpm build
+          pnpm smoke
+
+      - name: Commit recovered Living Brain
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "OsaTechGPT Recovery"
+          git config user.email "actions@users.noreply.github.com"
+          git add             apps/brain-web             packages/neurosa-brain-visualization             docs/NEUROSA_HB_LIVING_BRAIN_3D.md             tests/ui/brain-visualization.test.ts             tests/localization/polish-ui.test.ts             pnpm-lock.yaml
+          git diff --cached --exit-code && { echo "No recovery changes"; exit 1; } || true
+          git commit -m "feat: recover Living Brain 3D from verified Checkpoint D"
+          git push origin HEAD:recovery/living-brain-3d-main
