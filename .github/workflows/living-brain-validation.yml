@@ -1,6 +1,7 @@
 name: Living Brain 3D — validation
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - recovery/living-brain-3d-main
