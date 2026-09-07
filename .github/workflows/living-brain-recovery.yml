@@ -56,3 +56,5 @@ jobs:
           fi
           git commit -m "chore: normalize Living Brain recovery sources"
           git push origin HEAD:recovery/living-brain-3d-main
+
+# recovery-format-pass
