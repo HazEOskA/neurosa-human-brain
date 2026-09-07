@@ -31,10 +31,8 @@ jobs:
         with:
           node-version: "24"
       - run: npm install --global pnpm@11.7.0
-      - name: Zaktualizuj i sprawdź lockfile
-        run: |
-          pnpm install --lockfile-only
-          pnpm install --frozen-lockfile
+      - name: Zainstaluj zamrożone zależności
+        run: pnpm install --frozen-lockfile
       - name: Pełna walidacja repo
         run: |
           pnpm format:check
