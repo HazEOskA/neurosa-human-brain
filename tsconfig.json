@@ -36,7 +36,11 @@
       "@neurosa/runtime": ["packages/neural-runtime/src/index.ts"],
       "@neurosa/obsidian": ["packages/obsidian-adapter/src/index.ts"],
       "@neurosa/api-contracts": ["packages/brain-api-contracts/src/index.ts"],
-      "@neurosa/api": ["packages/brain-api/src/index.ts"]
+      "@neurosa/api": ["packages/brain-api/src/index.ts"],
+      "@neurosa/workspace/knowledge": ["packages/neurosa-workspace/src/knowledge.ts"],
+      "@neurosa/connect": ["packages/neurosa-connect/src/index.ts"],
+      "@neurosa/connect/tools": ["packages/neurosa-connect/src/tools.ts"],
+      "@neurosa/ingest": ["packages/neurosa-ingest/src/index.ts"]
     },
     "types": ["node", "vitest/globals"]
   },

@@ -6,6 +6,9 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      "@neurosa/connect/tools": `${root}packages/neurosa-connect/src/tools.ts`,
+      "@neurosa/connect": `${root}packages/neurosa-connect/src/index.ts`,
+      "@neurosa/ingest": `${root}packages/neurosa-ingest/src/index.ts`,
       "@neurosa/ast": `${root}packages/neurosa-ast/src/index.ts`,
       "@neurosa/lexer": `${root}packages/neurosa-lexer/src/index.ts`,
       "@neurosa/parser": `${root}packages/neurosa-parser/src/index.ts`,
@@ -21,6 +24,7 @@ export default defineConfig({
       "@neurosa/activation": `${root}packages/neurosa-activation/src/index.ts`,
       "@neurosa/neural-runtime": `${root}packages/neurosa-runtime/src/index.ts`,
       "@neurosa/document-domain": `${root}packages/neurosa-document-domain/src/index.ts`,
+      "@neurosa/workspace/knowledge": `${root}packages/neurosa-workspace/src/knowledge.ts`,
       "@neurosa/workspace": `${root}packages/neurosa-workspace/src/index.ts`,
       "@neurosa/brain-api": `${root}packages/neurosa-brain-api/src/index.ts`,
       "@neurosa/domain": `${root}packages/brain-domain/src/index.ts`,

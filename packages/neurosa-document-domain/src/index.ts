@@ -1,3 +1,5 @@
+import type { AgentSession, MemoryMetadata, ImportCheckpoint, OperationReceipt } from "./connect";
+
 export type DocumentSourceType = "NATIVE" | "OBSIDIAN_IMPORT" | "FILE_IMPORT" | "API";
 
 export interface DocumentHeading {
@@ -87,4 +89,20 @@ export interface BrainWorkspaceRepository {
   saveFolder(folder: BrainFolder): void;
   loadFolder(folderId: string): BrainFolder | null;
   listFolders(): readonly BrainFolder[];
+}
+
+export * from "./connect";
+
+export interface KnowledgeRepository extends BrainWorkspaceRepository {
+  atomic<T>(operation: () => T): T;
+  getSession(id: string): AgentSession | null;
+  saveSession(session: AgentSession): void;
+  getDocumentMemory(documentId: string): MemoryMetadata | null;
+  getMemory(key: string): MemoryMetadata | null;
+  saveMemory(brainId: string, key: string, metadata: MemoryMetadata): void;
+  countImportReferences(documentId: string): number;
+  getImport(key: string): ImportCheckpoint | null;
+  saveImport(key: string, checkpoint: ImportCheckpoint): void;
+  getReceipt(key: string): OperationReceipt | null;
+  saveReceipt(key: string, receipt: OperationReceipt): void;
 }

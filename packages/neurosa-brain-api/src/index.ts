@@ -2,10 +2,50 @@ import { randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import type { BrainDocument, BrainWorkspaceRepository } from "@neurosa/document-domain";
+import {
+  KnowledgeConflict,
+  type MemoryWrite,
+  type KnowledgeRepository,
+  type BrainDocument,
+  type BrainWorkspaceRepository,
+} from "@neurosa/document-domain";
 import type { NeurosaRuntime } from "@neurosa/neural-runtime";
-import type { ActivationRequest, BrainEvent } from "@neurosa/runtime-domain";
+import type { RuntimeRepository, ActivationRequest, BrainEvent } from "@neurosa/runtime-domain";
 import { NativeBrainWorkspace } from "@neurosa/workspace";
+import { SharedKnowledge } from "@neurosa/workspace/knowledge";
+import { z } from "zod";
+
+const memorySchema = z
+  .object({
+    title: z.string().trim().min(1).max(500),
+    content: z.string().min(1).max(900000),
+    path: z.string().trim().min(1).max(1000).optional(),
+    projectId: z.string().trim().min(1).max(200).optional(),
+    sessionId: z.string().trim().min(1).max(200).optional(),
+    kind: z.enum(["fact", "decision", "project", "event", "observation"]).optional(),
+    factKey: z.string().trim().min(1).max(500).optional(),
+    idempotencyKey: z.string().trim().min(1).max(500).optional(),
+    expectedRevision: z.number().int().min(0).optional(),
+    pinned: z.boolean().optional(),
+    favorite: z.boolean().optional(),
+    source: z
+      .object({
+        type: z.enum(["GOOGLE_DRIVE", "FILE", "CHAT_EXPORT", "SESSION"]),
+        id: z.string().min(1).max(2000),
+        version: z.string().min(1).max(200),
+        modifiedAt: z.iso.datetime().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+function memoryInput(value: unknown): MemoryWrite {
+  const result = memorySchema.safeParse(value);
+  if (!result.success)
+    throw new ApiProblem(400, "NIEPRAWIDŁOWE_DANE", "Nieprawidłowy zapis pamięci lub provenance");
+  return JSON.parse(JSON.stringify(result.data)) as MemoryWrite;
+}
 
 export const BRAIN_API_VERSION = "v1" as const;
 
@@ -210,6 +250,7 @@ export class BrainEventStream {
 export class BrainApiServer {
   private readonly server: Server;
   private readonly workspace: NativeBrainWorkspace;
+  private readonly knowledge: SharedKnowledge;
   private readonly eventStream = new BrainEventStream();
   private readonly rates = new Map<string, RateEntry>();
   private readonly credentials: readonly BrainApiCredential[];
@@ -219,10 +260,11 @@ export class BrainApiServer {
   private readonly now: () => number;
   private readonly idFactory: () => string;
   private address: BrainApiAddress | null = null;
+  private publishedSequence = 0;
 
   constructor(
     private readonly runtime: NeurosaRuntime,
-    private readonly repository: BrainWorkspaceRepository,
+    private readonly repository: BrainWorkspaceRepository & KnowledgeRepository & RuntimeRepository,
     options: BrainApiOptions,
   ) {
     if (options.credentials.length === 0) {
@@ -240,6 +282,8 @@ export class BrainApiServer {
     this.now = options.now ?? Date.now;
     this.idFactory = options.idFactory ?? randomUUID;
     this.workspace = new NativeBrainWorkspace(repository);
+    this.knowledge = new SharedKnowledge(repository, runtime.getProgram().brainId);
+    this.publishedSequence = runtime.listEvents().at(-1)?.sequence ?? 0;
     this.server = createServer((request, response) => {
       void this.handle(request, response);
     });
@@ -291,13 +335,30 @@ export class BrainApiServer {
         return;
       }
       const auth = this.authenticate(request);
+      const requestedBrain = request.headers["x-neurosa-brain-id"];
+      if (requestedBrain !== undefined && requestedBrain !== this.runtime.getProgram().brainId)
+        throw new ApiProblem(409, "INNY_MÓZG", "Klient wskazuje inny canonical brainId");
       this.enforceRate(auth, request);
-      await this.route(request, response, auth, correlationId);
+      try {
+        await this.route(request, response, auth, correlationId);
+      } finally {
+        const committed = this.runtime
+          .listEvents()
+          .filter((event) => event.sequence > this.publishedSequence);
+        this.publishedSequence = committed.at(-1)?.sequence ?? this.publishedSequence;
+        this.eventStream.publish(committed);
+      }
     } catch (error: unknown) {
       const problem =
-        error instanceof ApiProblem
-          ? error
-          : new ApiProblem(500, "BŁĄD_WEWNĘTRZNY", "Wewnętrzny błąd Brain API");
+        error instanceof KnowledgeConflict
+          ? new ApiProblem(
+              409,
+              "KONFLIKT",
+              `${error.message}; aktualna rewizja: ${String(error.currentRevision ?? "UNKNOWN")}`,
+            )
+          : error instanceof ApiProblem
+            ? error
+            : new ApiProblem(500, "BŁĄD_WEWNĘTRZNY", "Wewnętrzny błąd Brain API");
       const payload: JsonError = { code: problem.code, message: problem.message, correlationId };
       json(response, problem.status, payload, correlationId);
     }
@@ -382,6 +443,19 @@ export class BrainApiServer {
     if (request.method === "GET" && route.join("/") === "brain/events/stream") {
       this.requireScope(auth, "events:read");
       this.eventStream.subscribe(response, correlationId);
+      const lastId = request.headers["last-event-id"];
+      const cursor = Number(query(request).get("afterSequence") ?? "0");
+      const previous =
+        typeof lastId === "string"
+          ? this.runtime.listEvents().find((event) => event.eventId === lastId)?.sequence
+          : undefined;
+      for (const event of this.runtime
+        .listEvents()
+        .filter((event) => event.sequence > (previous ?? (Number.isFinite(cursor) ? cursor : 0)))) {
+        response.write(
+          `id: ${event.eventId}\nevent: ${event.eventType}\ndata: ${JSON.stringify(event)}\n\n`,
+        );
+      }
       return;
     }
 
@@ -405,7 +479,6 @@ export class BrainApiServer {
         );
       }
       const activationId = asString(body.activationId, "activationId", false) ?? this.idFactory();
-      const before = this.runtime.listEvents().length;
       const activation: ActivationRequest = {
         activationId,
         seedNeuronIds,
@@ -424,7 +497,6 @@ export class BrainApiServer {
         trybDeterministyczny: asBoolean(body.trybDeterministyczny, "trybDeterministyczny") ?? true,
       };
       const result = this.runtime.activate(activation);
-      this.eventStream.publish(this.runtime.listEvents().slice(before));
       json(response, 200, result, correlationId);
       return;
     }
@@ -467,19 +539,11 @@ export class BrainApiServer {
 
     if (request.method === "POST" && route.length === 1 && route[0] === "documents") {
       this.requireScope(auth, "memory:write");
-      const body = (await this.readJson(request)) as DocumentMutationInput;
-      const pinned = asBoolean(body.pinned, "pinned");
-      const favorite = asBoolean(body.favorite, "favorite");
-      const document = this.workspace.createDocument({
-        title: asString(body.title, "title") as string,
-        path: asString(body.path, "path") as string,
-        content: asString(body.content, "content") as string,
-        sourceType: "API",
-        sourceReference: auth.agentId,
-        ...(pinned === undefined ? {} : { pinned }),
-        ...(favorite === undefined ? {} : { favorite }),
-      });
-      json(response, 201, document, correlationId);
+      const input = memoryInput(await this.readJson(request));
+      if (input.path === undefined)
+        throw new ApiProblem(400, "NIEPRAWIDŁOWE_DANE", "Wymagana ścieżka dokumentu");
+      const result = this.knowledge.write(auth.agentId, input);
+      json(response, result.deduplicated ? 200 : 201, result.document, correlationId);
       return;
     }
 
@@ -492,21 +556,42 @@ export class BrainApiServer {
       const pinned = asBoolean(body.pinned, "pinned");
       const favorite = asBoolean(body.favorite, "favorite");
       const archived = asBoolean(body.archived, "archived");
-      const document = this.workspace.updateDocument(route[1], {
-        ...(title === undefined ? {} : { title }),
-        ...(path === undefined ? {} : { path }),
-        ...(content === undefined ? {} : { content }),
-        ...(pinned === undefined ? {} : { pinned }),
-        ...(favorite === undefined ? {} : { favorite }),
-        ...(archived === undefined ? {} : { archived }),
-      });
+      const document = this.knowledge.update(
+        auth.agentId,
+        route[1],
+        {
+          ...(title === undefined ? {} : { title }),
+          ...(path === undefined ? {} : { path }),
+          ...(content === undefined ? {} : { content }),
+          ...(pinned === undefined ? {} : { pinned }),
+          ...(favorite === undefined ? {} : { favorite }),
+          ...(archived === undefined ? {} : { archived }),
+        },
+        (body as { expectedRevision?: unknown }).expectedRevision === undefined
+          ? undefined
+          : asNumber(
+              (body as { expectedRevision?: unknown }).expectedRevision,
+              "expectedRevision",
+              0,
+              0,
+              Number.MAX_SAFE_INTEGER,
+              true,
+            ),
+      );
       json(response, 200, document, correlationId);
       return;
     }
 
     if (request.method === "DELETE" && route[0] === "documents" && route[1] !== undefined) {
       this.requireScope(auth, "memory:write");
-      this.workspace.deleteDocument(route[1]);
+      const expected = query(request).get("expectedRevision");
+      this.knowledge.remove(
+        auth.agentId,
+        route[1],
+        expected === null
+          ? undefined
+          : asNumber(Number(expected), "expectedRevision", 0, 0, Number.MAX_SAFE_INTEGER, true),
+      );
       response.writeHead(204, { "x-correlation-id": correlationId });
       response.end();
       return;
@@ -514,15 +599,36 @@ export class BrainApiServer {
 
     if (request.method === "POST" && route.join("/") === "brain/recall") {
       this.requireScope(auth, "memory:read");
-      const body = (await this.readJson(request)) as { query?: unknown; limit?: unknown };
+      const body = (await this.readJson(request)) as {
+        query?: unknown;
+        limit?: unknown;
+        maxChars?: unknown;
+        includeCore?: unknown;
+      };
       const search = asString(body.query, "query") as string;
       const limit = asNumber(body.limit, "limit", 10, 1, 100, true);
-      json(
-        response,
-        200,
-        { query: search, memories: this.workspace.search(search, limit) },
-        correlationId,
-      );
+      if (body.includeCore === true) {
+        this.requireScope(auth, "brain:read");
+        const maxChars = asNumber(body.maxChars, "maxChars", 12000, 512, 64000, true);
+        json(
+          response,
+          200,
+          {
+            query: search,
+            brainId: this.runtime.getProgram().brainId,
+            ledgerValid: this.runtime.verifyLedger().valid,
+            ...this.knowledge.context(search, maxChars, limit),
+          },
+          correlationId,
+        );
+      } else {
+        json(
+          response,
+          200,
+          { query: search, memories: this.workspace.search(search, limit) },
+          correlationId,
+        );
+      }
       return;
     }
 
@@ -531,21 +637,88 @@ export class BrainApiServer {
       (route.join("/") === "brain/remember" || route.join("/") === "brain/observe")
     ) {
       this.requireScope(auth, "memory:write");
-      const body = (await this.readJson(request)) as DocumentMutationInput & { kind?: unknown };
-      const kind = route[1] === "observe" ? "obserwacja" : "pamięć";
-      const title = asString(body.title, "title") as string;
-      const content = asString(body.content, "content") as string;
-      const path =
-        asString(body.path, "path", false) ??
-        `agent/${auth.agentId}/${kind}-${this.idFactory()}.md`;
-      const document = this.workspace.createDocument({
-        title,
-        path,
-        content,
-        sourceType: "API",
-        sourceReference: auth.agentId,
-      });
-      json(response, 201, { status: "ZAPAMIĘTANO", document }, correlationId);
+      let input = memoryInput(await this.readJson(request));
+      if (
+        input.path === undefined &&
+        input.factKey === undefined &&
+        input.source === undefined &&
+        input.idempotencyKey === undefined
+      )
+        input = {
+          ...input,
+          path: `agent/${encodeURIComponent(auth.agentId)}/${route[1] === "observe" ? "obserwacja" : "pamięć"}-${this.idFactory()}.md`,
+        };
+      const result = this.knowledge.write(auth.agentId, input);
+      json(
+        response,
+        result.deduplicated ? 200 : 201,
+        { status: "ZAPAMIĘTANO", ...result },
+        correlationId,
+      );
+      return;
+    }
+
+    if (request.method === "POST" && route.join("/") === "sessions") {
+      this.requireScope(auth, "memory:write");
+      this.requireScope(auth, "brain:read");
+      const parsed = z
+        .object({
+          sessionId: z.string().min(1).max(200),
+          projectId: z.string().min(1).max(200),
+          provider: z.string().min(1).max(100),
+        })
+        .strict()
+        .safeParse(await this.readJson(request));
+      if (!parsed.success)
+        throw new ApiProblem(400, "NIEPRAWIDŁOWE_DANE", "Nieprawidłowe dane sesji");
+      const { sessionId, projectId, provider } = parsed.data;
+      json(
+        response,
+        200,
+        this.knowledge.startSession(auth.agentId, sessionId, projectId, provider),
+        correlationId,
+      );
+      return;
+    }
+    if (
+      request.method === "POST" &&
+      route[0] === "sessions" &&
+      route[1] !== undefined &&
+      route[2] === "complete" &&
+      route.length === 3
+    ) {
+      this.requireScope(auth, "memory:write");
+      const parsed = z
+        .object({ entries: z.array(z.unknown()).max(100) })
+        .strict()
+        .safeParse(await this.readJson(request));
+      if (!parsed.success)
+        throw new ApiProblem(400, "NIEPRAWIDŁOWE_DANE", "Wymagana lista wyników sesji (maks. 100)");
+      json(
+        response,
+        200,
+        this.knowledge.completeSession(
+          auth.agentId,
+          decodeURIComponent(route[1]),
+          parsed.data.entries.map(memoryInput),
+        ),
+        correlationId,
+      );
+      return;
+    }
+    if (
+      request.method === "GET" &&
+      route[0] === "sessions" &&
+      route[1] !== undefined &&
+      route.length === 2
+    ) {
+      this.requireScope(auth, "memory:read");
+      json(
+        response,
+        200,
+        this.knowledge.session(decodeURIComponent(route[1]), auth.agentId),
+        correlationId,
+      );
       return;
     }
 
@@ -608,7 +781,7 @@ export class BrainApiServer {
     response.setHeader("vary", "Origin");
     response.setHeader(
       "access-control-allow-headers",
-      "authorization, content-type, x-correlation-id",
+      "authorization, content-type, x-correlation-id, x-neurosa-brain-id, last-event-id",
     );
     response.setHeader("access-control-allow-methods", "GET, POST, PATCH, DELETE, OPTIONS");
     response.setHeader("x-correlation-id", correlationId);

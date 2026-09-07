@@ -1,10 +1,16 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { BrainApiServer, type BrainApiScope } from "@neurosa/brain-api";
+import {
+  BRAIN_API_SCOPES,
+  BrainApiServer,
+  type BrainApiScope,
+  type BrainApiCredential,
+} from "@neurosa/brain-api";
 import { compileSource } from "@neurosa/compiler";
 import { NeurosaRuntime } from "@neurosa/neural-runtime";
 import { SqliteRuntimeRepository } from "@neurosa/storage";
+import { z } from "zod";
 
 function numberFromEnv(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -24,9 +30,34 @@ function scopesFromEnv(): BrainApiScope[] {
     .filter(Boolean) as BrainApiScope[];
 }
 
-const token = process.env.NEUROSA_API_TOKEN;
-if (token === undefined) {
-  throw new Error("Ustaw NEUROSA_API_TOKEN o długości co najmniej 24 znaków");
+const credentialFile = process.env.NEUROSA_CREDENTIALS_FILE;
+let credentials: readonly BrainApiCredential[];
+if (credentialFile !== undefined) {
+  const schema = z
+    .array(
+      z
+        .object({
+          token: z.string().min(24),
+          agentId: z.string().min(1).max(200),
+          scopes: z.array(z.enum(BRAIN_API_SCOPES)),
+        })
+        .strict(),
+    )
+    .min(1);
+  credentials = schema.parse(
+    JSON.parse(await readFile(resolve(credentialFile), "utf8")) as unknown,
+  );
+  if (
+    new Set(credentials.map((c) => c.token)).size !== credentials.length ||
+    new Set(credentials.map((c) => c.agentId)).size !== credentials.length
+  )
+    throw new Error("Każdy klient wymaga osobnego tokenu i agentId");
+} else {
+  const token = process.env.NEUROSA_API_TOKEN;
+  if (token === undefined) throw new Error("Ustaw NEUROSA_API_TOKEN lub NEUROSA_CREDENTIALS_FILE");
+  credentials = [
+    { token, agentId: process.env.NEUROSA_AGENT_ID ?? "operator-localny", scopes: scopesFromEnv() },
+  ];
 }
 
 const sourcePath = resolve(process.env.NEUROSA_BRAIN_SOURCE ?? "examples/minimal-brain/brain.nsa");
@@ -38,13 +69,7 @@ const runtime = new NeurosaRuntime(repository);
 runtime.load(compilation.ir);
 
 const server = new BrainApiServer(runtime, repository, {
-  credentials: [
-    {
-      token,
-      agentId: process.env.NEUROSA_AGENT_ID ?? "operator-localny",
-      scopes: scopesFromEnv(),
-    },
-  ],
+  credentials,
   allowedOrigins: (process.env.NEUROSA_ALLOWED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())

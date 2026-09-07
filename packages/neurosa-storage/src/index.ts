@@ -3,6 +3,11 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 import type {
+  AgentSession,
+  MemoryMetadata,
+  ImportCheckpoint,
+  OperationReceipt,
+  KnowledgeRepository,
   BrainDocument,
   BrainFolder,
   BrainWorkspaceRepository,
@@ -29,7 +34,7 @@ import {
 } from "@neurosa/runtime-domain";
 import Database from "better-sqlite3";
 
-export const LATEST_SCHEMA_VERSION = 2;
+export const LATEST_SCHEMA_VERSION = 3;
 
 type DatabaseRow = Record<string, unknown>;
 
@@ -341,7 +346,9 @@ const MIGRATION_2_SQL = `
   CREATE INDEX idx_connection_proposals_status ON connection_proposals(brain_id, status);
 `;
 
-export class SqliteRuntimeRepository implements RuntimeRepository, BrainWorkspaceRepository {
+export class SqliteRuntimeRepository
+  implements RuntimeRepository, BrainWorkspaceRepository, KnowledgeRepository
+{
   private readonly database: Database.Database;
 
   constructor(readonly path: string) {
@@ -378,6 +385,16 @@ export class SqliteRuntimeRepository implements RuntimeRepository, BrainWorkspac
       current = 1;
     }
     if (current < 2) this.applyMigration(2, MIGRATION_2_SQL);
+    if (current < 3)
+      this.applyMigration(
+        3,
+        `
+      CREATE TABLE operation_receipts (
+        operation_key TEXT PRIMARY KEY,
+        receipt_json TEXT NOT NULL
+      );
+    `,
+      );
   }
 
   getSchemaVersion(): number {
@@ -725,6 +742,125 @@ export class SqliteRuntimeRepository implements RuntimeRepository, BrainWorkspac
 
   close(): void {
     if (this.database.open) this.database.close();
+  }
+
+  atomic<T>(operation: () => T): T {
+    return this.database.transaction(operation).immediate();
+  }
+
+  getSession(id: string): AgentSession | null {
+    const row = asRow(
+      this.database.prepare("SELECT context_json FROM agent_sessions WHERE session_id = ?").get(id),
+    );
+    return row === undefined ? null : parseJson<AgentSession>(row.context_json, "context_json");
+  }
+
+  saveSession(session: AgentSession): void {
+    this.database
+      .prepare(
+        `INSERT INTO agents(agent_id, name, scopes_json, created_at, updated_at)
+      VALUES (?, ?, '[]', ?, ?) ON CONFLICT(agent_id) DO NOTHING`,
+      )
+      .run(session.agentId, session.agentId, session.createdAt, session.createdAt);
+    this.database
+      .prepare(
+        `INSERT INTO agent_sessions(session_id, agent_id, project_id, trace_id, context_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(session_id) DO UPDATE SET context_json = excluded.context_json`,
+      )
+      .run(
+        session.sessionId,
+        session.agentId,
+        session.projectId,
+        session.sessionId,
+        JSON.stringify(session),
+        session.createdAt,
+      );
+  }
+
+  getDocumentMemory(documentId: string): MemoryMetadata | null {
+    const row = asRow(
+      this.database
+        .prepare(
+          "SELECT content_json FROM memory_records WHERE json_extract(content_json, '$.documentId') = ? ORDER BY updated_at DESC LIMIT 1",
+        )
+        .get(documentId),
+    );
+    return row === undefined ? null : parseJson<MemoryMetadata>(row.content_json, "content_json");
+  }
+
+  getMemory(key: string): MemoryMetadata | null {
+    const row = asRow(
+      this.database.prepare("SELECT content_json FROM memory_records WHERE memory_id = ?").get(key),
+    );
+    return row === undefined ? null : parseJson<MemoryMetadata>(row.content_json, "content_json");
+  }
+
+  saveMemory(brainId: string, key: string, metadata: MemoryMetadata): void {
+    const now = new Date().toISOString();
+    this.database
+      .prepare(
+        `INSERT INTO memory_records(memory_id, brain_id, memory_type, content_json,
+      confidence, salience, provenance_json, created_at, updated_at) VALUES (?, ?, ?, ?, 0, 0, ?, ?, ?)
+      ON CONFLICT(memory_id) DO UPDATE SET content_json=excluded.content_json,
+      provenance_json=excluded.provenance_json, updated_at=excluded.updated_at`,
+      )
+      .run(
+        key,
+        brainId,
+        metadata.kind,
+        JSON.stringify(metadata),
+        JSON.stringify({
+          agentId: metadata.agentId,
+          sessionId: metadata.sessionId,
+          source: metadata.source ?? "UNKNOWN",
+        }),
+        now,
+        now,
+      );
+  }
+
+  countImportReferences(documentId: string): number {
+    const row = asRow(
+      this.database
+        .prepare(
+          "SELECT COUNT(*) AS count FROM imports WHERE json_extract(report_json, '$.documentId') = ?",
+        )
+        .get(documentId),
+    );
+    return row === undefined ? 0 : numberValue(row.count, "count");
+  }
+
+  getImport(key: string): ImportCheckpoint | null {
+    const row = asRow(
+      this.database.prepare("SELECT report_json FROM imports WHERE import_id = ?").get(key),
+    );
+    return row === undefined ? null : parseJson<ImportCheckpoint>(row.report_json, "report_json");
+  }
+
+  saveImport(key: string, checkpoint: ImportCheckpoint): void {
+    const now = new Date().toISOString();
+    this.database
+      .prepare(
+        `INSERT INTO imports(import_id, source_type, source_reference, report_json,
+      created_at, completed_at, status) VALUES (?, ?, ?, ?, ?, ?, 'COMPLETED')
+      ON CONFLICT(import_id) DO UPDATE SET report_json=excluded.report_json, completed_at=excluded.completed_at`,
+      )
+      .run(key, checkpoint.source.type, checkpoint.source.id, JSON.stringify(checkpoint), now, now);
+  }
+
+  getReceipt(key: string): OperationReceipt | null {
+    const row = asRow(
+      this.database
+        .prepare("SELECT receipt_json FROM operation_receipts WHERE operation_key = ?")
+        .get(key),
+    );
+    return row === undefined ? null : parseJson<OperationReceipt>(row.receipt_json, "receipt_json");
+  }
+
+  saveReceipt(key: string, receipt: OperationReceipt): void {
+    this.database
+      .prepare("INSERT INTO operation_receipts(operation_key, receipt_json) VALUES (?, ?)")
+      .run(key, JSON.stringify(receipt));
   }
 
   private applyMigration(version: number, sql: string): void {

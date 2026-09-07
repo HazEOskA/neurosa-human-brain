@@ -16,6 +16,12 @@ Checkpoint A dodaje natywne środowisko pamięci: foldery, dokumenty Markdown, f
 
 Checkpoint B dodaje jednorazowy, tylko do odczytu importer Obsidiana. Kopiuje notatki i bezpieczne załączniki do natywnego workspace, tworzy neurony oraz rzeczywiste synapsy z wikilinków, zapisuje raport i zdarzenia ledgeru. Po imporcie źródłowy Vault nie jest potrzebny.
 
+## Wspólny mózg: Connect i Ingest
+
+Connect dodaje trwałe sesje agentów, core context + retrieval oraz atomowy zapis wyników do istniejących dokumentów i ledgeru. Ingest obsługuje Drive, pliki PDF/DOCX/tekstowe i eksporty rozmów. Adapter HTTP i MCP korzystają z tego samego Brain API.
+
+Konfiguracja, przykłady, konflikty i rzeczywiste ograniczenia: [NeurOSA Connect](docs/NEUROSA_CONNECT.md). Living Brain z Checkpointu D nadal wymaga odzyskania poprawnej paczki źródłowej; nie jest częścią zweryfikowanego builda UI.
+
 ## Wymagania
 
 - Node.js 24 lub nowszy,

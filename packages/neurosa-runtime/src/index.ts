@@ -30,6 +30,8 @@ export class NeurosaRuntime {
     private readonly activationOptions: ActivationEngineOptions = {},
   ) {
     this.repository.initialize();
+    if (!repository.verifyLedger().valid)
+      throw new Error("Uszkodzony ledger: uruchomienie runtime zablokowane");
     this.ledger = new HashChainLedger(repository);
   }
 

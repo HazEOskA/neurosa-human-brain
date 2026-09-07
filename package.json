@@ -19,7 +19,8 @@
     "lint": "eslint .",
     "smoke": "node --import tsx tests/e2e/vertical-slice.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "connect": "node --import tsx apps/neurosa-connect/src/cli.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",

@@ -1,5 +1,5 @@
 {
-  "name": "@neurosa/brain-api",
+  "name": "@neurosa/ingest",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,11 +8,10 @@
     "build": "tsc --noEmit -p ../../tsconfig.json"
   },
   "dependencies": {
+    "@neurosa/connect": "workspace:*",
     "@neurosa/document-domain": "workspace:*",
-    "@neurosa/neural-runtime": "workspace:*",
-    "@neurosa/runtime-domain": "workspace:*",
-    "@neurosa/workspace": "workspace:*",
-    "@neurosa/event-ledger": "workspace:*",
-    "zod": "4.4.3"
+    "zod": "4.4.3",
+    "pdf-parse": "2.4.5",
+    "mammoth": "1.12.2"
   }
 }

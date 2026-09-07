@@ -199,7 +199,7 @@ describe("natywny workspace dokumentów", () => {
 
       const migrated = new SqliteRuntimeRepository(path);
       migrated.initialize();
-      expect(migrated.getSchemaVersion()).toBe(2);
+      expect(migrated.getSchemaVersion()).toBe(3);
       expect(migrated.loadBrain(ir.brainId)?.sourceHash).toBe(ir.sourceHash);
       expect(migrated.listEvents()).toEqual([event]);
       expect(migrated.verifyLedger()).toEqual({ valid: true, errors: [] });
