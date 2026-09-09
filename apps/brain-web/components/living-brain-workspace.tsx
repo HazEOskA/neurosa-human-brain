@@ -417,6 +417,12 @@ export function LivingBrainWorkspace() {
     }
   }, [apiBaseUrl, neurons, token]);
 
+  useEffect(() => {
+    if (window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost") {
+      setApiBaseUrl(window.location.origin);
+    }
+  }, []);
+
   useEffect(
     () => () => {
       streamAbort.current?.abort();
