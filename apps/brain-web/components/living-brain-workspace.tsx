@@ -15,8 +15,9 @@ import {
   type SceneSynapse,
 } from "@neurosa/brain-visualization";
 import { Line, OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Mesh } from "three";
 
 interface BrainStatus {
   readonly status: string;
@@ -102,6 +103,70 @@ function synapseColor(synapse: SceneSynapse, visualState: BrainVisualState): str
   return synapse.mode === "INHIBITORY" ? "#554f87" : "#315f8f";
 }
 
+function AnimatedImpulse({
+  source,
+  target,
+  strength,
+  mode,
+  delivered,
+  eventTimestamp,
+}: {
+  readonly source: SceneNeuron;
+  readonly target: SceneNeuron;
+  readonly strength: number;
+  readonly mode: "EXCITATORY" | "INHIBITORY";
+  readonly delivered: boolean;
+  readonly eventTimestamp: string;
+}) {
+  const meshRef = useRef<Mesh>(null);
+  const startedAt = useRef<number | null>(null);
+  const staleAtMount = useMemo(() => {
+    const eventTime = Date.parse(eventTimestamp);
+    return !Number.isFinite(eventTime) || Math.abs(Date.now() - eventTime) > 10_000;
+  }, [eventTimestamp]);
+
+  useEffect(() => {
+    startedAt.current = staleAtMount ? -1 : performance.now();
+  }, [eventTimestamp, staleAtMount]);
+
+  useFrame(() => {
+    const mesh = meshRef.current;
+    if (mesh === null) return;
+
+    if (startedAt.current === null) startedAt.current = performance.now();
+    if (startedAt.current < 0) {
+      mesh.visible = false;
+      return;
+    }
+
+    mesh.visible = true;
+    const elapsed = performance.now() - startedAt.current;
+    const durationMs = delivered ? 1_400 : 900;
+    const normalized = Math.min(1, Math.max(0, elapsed / durationMs));
+    const progress = delivered ? normalized : Math.min(0.72, normalized * 0.72);
+
+    mesh.position.set(
+      source.position[0] + (target.position[0] - source.position[0]) * progress,
+      source.position[1] + (target.position[1] - source.position[1]) * progress,
+      source.position[2] + (target.position[2] - source.position[2]) * progress,
+    );
+
+    const pulse = 1 + Math.sin(elapsed / 72) * 0.22;
+    const size = (0.035 + strength * 0.035) * pulse;
+    mesh.scale.setScalar(size);
+
+    if (delivered && normalized >= 1) mesh.visible = false;
+  });
+
+  const color = mode === "INHIBITORY" ? "#9a8cff" : "#ffe29a";
+  return (
+    <mesh ref={meshRef}>
+      <sphereGeometry args={[1, 14, 14]} />
+      <meshBasicMaterial color={color} />
+    </mesh>
+  );
+}
+
 function BrainModel({
   neurons,
   synapses,
@@ -176,22 +241,16 @@ function BrainModel({
         const source = neuronById.get(impulse.sourceNeuronId);
         const target = neuronById.get(impulse.targetNeuronId);
         if (source === undefined || target === undefined) return null;
-        const progress = impulse.delivered ? 0.86 : 0.46;
-        const position: [number, number, number] = [
-          source.position[0] + (target.position[0] - source.position[0]) * progress,
-          source.position[1] + (target.position[1] - source.position[1]) * progress,
-          source.position[2] + (target.position[2] - source.position[2]) * progress,
-        ];
-        const color = impulse.mode === "INHIBITORY" ? "#9a8cff" : "#ffe29a";
         return (
-          <mesh
-            key={impulse.impulseId}
-            position={position}
-            scale={0.035 + impulse.strength * 0.035}
-          >
-            <sphereGeometry args={[1, 12, 12]} />
-            <meshBasicMaterial color={color} />
-          </mesh>
+          <AnimatedImpulse
+            key={impulse.impulseId + ":" + String(impulse.sequence)}
+            source={source}
+            target={target}
+            strength={impulse.strength}
+            mode={impulse.mode}
+            delivered={impulse.delivered}
+            eventTimestamp={impulse.eventTimestamp}
+          />
         );
       })}
 
@@ -306,7 +365,7 @@ export function LivingBrainWorkspace() {
       setMessage(
         "Połączono z canonical brainId " +
           brainStatus.brainId +
-          ". Światło i impulsy pochodzą wyłącznie z eventów runtime’u.",
+          ". Światło i impulsy pochodzą wyłącznie z eventów runtime’u. Przelot jest renderowany jako czytelne zwolnione tempo wizualne realnego eventu.",
       );
 
       const controller = new AbortController();
