@@ -71,6 +71,7 @@ export interface VisualImpulse {
   readonly eventId: string;
   readonly sequence: number;
   readonly delivered: boolean;
+  readonly eventTimestamp: string;
 }
 
 export interface DynamicSynapse extends BrainSynapseView {
@@ -336,6 +337,7 @@ export function applyBrainEvent(
             eventId: event.eventId,
             sequence: event.sequence,
             delivered: event.eventType === "IMPULSE_DELIVERED",
+            eventTimestamp: event.timestamp,
           },
         },
       };
