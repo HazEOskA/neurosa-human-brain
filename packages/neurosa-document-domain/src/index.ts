@@ -92,6 +92,7 @@ export interface BrainWorkspaceRepository {
 }
 
 export * from "./connect";
+export * from "./continuity";
 
 export interface KnowledgeRepository extends BrainWorkspaceRepository {
   atomic<T>(operation: () => T): T;
