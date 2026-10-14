@@ -1,0 +1,26 @@
+name: OSA Continuity P1 — kontrakt i typy
+on:
+  push:
+    branches: [feature/osa-continuity-p1]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pnpm
+        run: npm install -g pnpm@11.7.0
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify canonical V1 contracts
+        run: pnpm exec vitest run tests/continuity/contracts.test.ts
+      - name: Typecheck all NeurOSA packages
+        run: pnpm typecheck
+      - name: Print checked SHA
+        run: git rev-parse HEAD
