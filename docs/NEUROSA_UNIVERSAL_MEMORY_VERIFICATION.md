@@ -64,7 +64,7 @@ Surowe wyniki i identyfikatory operacji: [universal-memory-v0.1.json](evidence/u
 
 Nowy plik `tests/connect/universal-memory.test.ts` zawiera 11 przypadków z lokalnym HTTP i rzeczywistym SQLite oraz 5 przypadków z mockiem transportu. Negatywne testy obejmują rzeczywistą zmianę treści/hash dokumentu oraz uszkodzenie ledgeru **wyłącznie w świeżej bazie testowej**. Mocki sprawdzają m.in. podmienioną odpowiedź, limit rozmiaru, redakcję błędów i stary backend bez scope. Mocki nie są dowodem połączenia z Azure.
 
-Dotychczasowy build zgłasza ostrzeżenia Turbo o braku plików wyjściowych dla pakietów budowanych przez `tsc --noEmit`; wszystkie 21 zadań zakończyło się poprawnie. Testu Docker w tej sesji nie uruchamiano; workflow CI nadal zawiera osobną bramkę kontenera.
+Dotychczasowy build zgłasza ostrzeżenia Turbo o braku plików wyjściowych dla pakietów budowanych przez `tsc --noEmit`; wszystkie 21 zadań zakończyło się poprawnie. Lokalnie nie uruchamiano Dockera. Następnie [GitHub Actions #39114284194](https://github.com/HazEOskA/neurosa-human-brain/actions/runs/39114284194) zakończyło się **success** dla commita implementacji `3b83ca69d2f108159d5308e471086afd8ed1268f`: zarówno „Kod i integracja”, jak i „Kontener i trwałość danych” przeszły. Obejmuje to test kontenera z odtworzeniem i awarią procesu. [Zapis statusów CI](evidence/universal-memory-ci.json).
 
 ## Artefakt i integralność
 
