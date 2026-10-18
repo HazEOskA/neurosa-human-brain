@@ -15,6 +15,7 @@ export const CONNECT_TOOL_SCHEMAS = {
     maxChars: z.number().int().min(512).max(64000).default(12000),
   }),
   neurosa_remember: z.object({
+    originAgentId: nonempty.optional(),
     sessionId: nonempty,
     projectId: nonempty,
     title: nonempty,

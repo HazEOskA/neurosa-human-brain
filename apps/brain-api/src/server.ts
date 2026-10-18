@@ -14,6 +14,14 @@ import { z } from "zod";
 import { listenOptions } from "./config.js";
 
 const listen = listenOptions(process.env);
+if (
+  process.env.NEUROSA_MEMORY_NAMESPACE === undefined &&
+  (process.env.NEUROSA_ORGANIZATION_ID !== undefined ||
+    process.env.NEUROSA_PROJECT_ID !== undefined)
+)
+  throw new Error(
+    "Przypisanie scope wymaga NEUROSA_MEMORY_NAMESPACE, NEUROSA_ORGANIZATION_ID i NEUROSA_PROJECT_ID",
+  );
 
 function scopesFromEnv(): BrainApiScope[] {
   const raw = process.env.NEUROSA_API_SCOPES ?? "admin";
@@ -63,6 +71,15 @@ runtime.load(compilation.ir);
 
 const server = new BrainApiServer(runtime, repository, {
   credentials,
+  ...(process.env.NEUROSA_MEMORY_NAMESPACE !== undefined
+    ? {
+        memoryScope: {
+          namespace: process.env.NEUROSA_MEMORY_NAMESPACE,
+          organizationId: process.env.NEUROSA_ORGANIZATION_ID ?? "",
+          projectId: process.env.NEUROSA_PROJECT_ID ?? "",
+        },
+      }
+    : {}),
   allowedOrigins: (process.env.NEUROSA_ALLOWED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())

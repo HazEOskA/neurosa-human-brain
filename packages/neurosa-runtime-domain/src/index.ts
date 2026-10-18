@@ -98,6 +98,7 @@ export interface ActivationResult {
 }
 
 export const BRAIN_EVENT_TYPES = [
+  "MEMORY_SCOPE_BOUND",
   "SESSION_STARTED",
   "SESSION_COMPLETED",
   "MEMORY_WRITTEN",

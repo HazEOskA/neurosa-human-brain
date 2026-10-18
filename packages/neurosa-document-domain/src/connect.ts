@@ -6,6 +6,8 @@ export interface KnowledgeSource {
 }
 
 export interface MemoryWrite {
+  /** Provenance supplied by a trusted agent host; never an authorization identity. */
+  readonly originAgentId?: string;
   readonly pinned?: boolean;
   readonly favorite?: boolean;
   readonly title: string;
@@ -41,6 +43,7 @@ export class KnowledgeConflict extends Error {
 }
 
 export interface MemoryMetadata {
+  readonly originAgentId?: string;
   readonly documentId: string;
   readonly projectId: string;
   readonly kind: string;
@@ -49,6 +52,13 @@ export interface MemoryMetadata {
   readonly sessionId?: string;
   readonly source?: KnowledgeSource;
   readonly revision: number;
+}
+
+/** v0.1 binds one complete canonical brain/database to exactly one tenant scope. */
+export interface MemoryScope {
+  readonly organizationId: string;
+  readonly projectId: string;
+  readonly namespace: string;
 }
 export interface ImportCheckpoint {
   readonly documentId: string;

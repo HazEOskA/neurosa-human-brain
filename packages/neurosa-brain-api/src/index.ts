@@ -5,6 +5,7 @@ import type { AddressInfo } from "node:net";
 import {
   KnowledgeConflict,
   type MemoryWrite,
+  type MemoryScope,
   type KnowledgeRepository,
   type BrainDocument,
   type BrainWorkspaceRepository,
@@ -17,6 +18,7 @@ import { z } from "zod";
 
 const memorySchema = z
   .object({
+    originAgentId: z.string().trim().min(1).max(200).optional(),
     title: z.string().trim().min(1).max(500),
     content: z.string().min(1).max(900000),
     path: z.string().trim().min(1).max(1000).optional(),
@@ -40,11 +42,15 @@ const memorySchema = z
   })
   .strict();
 
-function memoryInput(value: unknown): MemoryWrite {
+function memoryInput(value: unknown, scope?: MemoryScope): MemoryWrite {
   const result = memorySchema.safeParse(value);
   if (!result.success)
     throw new ApiProblem(400, "NIEPRAWIDŁOWE_DANE", "Nieprawidłowy zapis pamięci lub provenance");
-  return JSON.parse(JSON.stringify(result.data)) as MemoryWrite;
+  if (scope && result.data.projectId !== undefined && result.data.projectId !== scope.projectId)
+    throw new ApiProblem(403, "MEMORY_SCOPE_DENIED", "Projekt poza przypisanym scope pamięci");
+  return JSON.parse(
+    JSON.stringify({ ...result.data, ...(scope ? { projectId: scope.projectId } : {}) }),
+  ) as MemoryWrite;
 }
 
 export const BRAIN_API_VERSION = "v1" as const;
@@ -67,6 +73,7 @@ export interface BrainApiCredential {
 }
 
 export interface BrainApiOptions {
+  readonly memoryScope?: MemoryScope;
   readonly credentials: readonly BrainApiCredential[];
   readonly allowedOrigins?: readonly string[];
   readonly maxBodyBytes?: number;
@@ -250,6 +257,7 @@ export class BrainEventStream {
 }
 
 export class BrainApiServer {
+  private readonly memoryScope: MemoryScope | undefined;
   private readonly server: Server;
   private readonly workspace: NativeBrainWorkspace;
   private readonly knowledge: SharedKnowledge;
@@ -285,6 +293,19 @@ export class BrainApiServer {
     this.idFactory = options.idFactory ?? randomUUID;
     this.workspace = new NativeBrainWorkspace(repository);
     this.knowledge = new SharedKnowledge(repository, runtime.getProgram().brainId);
+    this.memoryScope = options.memoryScope
+      ? Object.freeze(
+          z
+            .object({
+              organizationId: z.string().trim().min(1).max(200),
+              projectId: z.string().trim().min(1).max(200),
+              namespace: z.string().trim().min(1).max(200),
+            })
+            .strict()
+            .parse(options.memoryScope),
+        )
+      : undefined;
+    this.knowledge.bindScope(this.memoryScope);
     this.publishedSequence = runtime.listEvents().at(-1)?.sequence ?? 0;
     this.server = createServer((request, response) => {
       void this.handle(request, response);
@@ -343,9 +364,38 @@ export class BrainApiServer {
         return;
       }
       const auth = this.authenticate(request);
+      const scopeHeaders = {
+        organizationId: request.headers["x-neurosa-organization-id"],
+        projectId: request.headers["x-neurosa-project-id"],
+        namespace: request.headers["x-neurosa-namespace"],
+      };
+      if (this.memoryScope) {
+        for (const key of ["organizationId", "projectId", "namespace"] as const) {
+          let value: string | undefined;
+          try {
+            if (typeof scopeHeaders[key] === "string")
+              value = decodeURIComponent(scopeHeaders[key]);
+          } catch {
+            /* Invalid encoding is denied below. */
+          }
+          if (value !== this.memoryScope[key])
+            throw new ApiProblem(
+              403,
+              "MEMORY_SCOPE_DENIED",
+              "Scope pamięci nie odpowiada przypisaniu backendu",
+            );
+        }
+      } else if (Object.values(scopeHeaders).some((value) => value !== undefined))
+        throw new ApiProblem(
+          409,
+          "MEMORY_SCOPE_UNAVAILABLE",
+          "Backend nie ma trwałego przypisania scope",
+        );
       const requestedBrain = request.headers["x-neurosa-brain-id"];
       if (requestedBrain !== undefined && requestedBrain !== this.runtime.getProgram().brainId)
         throw new ApiProblem(409, "INNY_MÓZG", "Klient wskazuje inny canonical brainId");
+      if (this.memoryScope && !this.runtime.verifyLedger().valid)
+        throw new ApiProblem(409, "MEMORY_INTEGRITY_REJECTED", "Uszkodzony ledger");
       this.enforceRate(auth, request);
       try {
         await this.route(request, response, auth, correlationId);
@@ -400,6 +450,9 @@ export class BrainApiServer {
           neurons: this.runtime.getNeuronStates().length,
           synapses: this.runtime.getSynapseStates().length,
           ledgerValid: verification.valid,
+          ledgerHead: this.runtime.listEvents().at(-1)?.eventHash ?? "0".repeat(64),
+          operationId: correlationId,
+          ...(this.memoryScope ? { memoryScope: this.memoryScope } : {}),
         },
         correlationId,
       );
@@ -527,7 +580,10 @@ export class BrainApiServer {
       this.requireScope(auth, "memory:read");
       const search = query(request).get("q")?.trim();
       if (search !== undefined && search.length > 0) {
-        json(response, 200, { results: this.workspace.search(search) }, correlationId);
+        const results = this.workspace.search(search);
+        if (this.memoryScope)
+          for (const item of results) this.knowledge.assertDocumentIntegrity(item.document);
+        json(response, 200, { results }, correlationId);
       } else {
         json(
           response,
@@ -541,13 +597,19 @@ export class BrainApiServer {
 
     if (request.method === "GET" && route[0] === "documents" && route[1] !== undefined) {
       this.requireScope(auth, "memory:read");
-      json(response, 200, this.workspace.getDocument(route[1]), correlationId);
+      const document = this.workspace.getDocument(route[1]);
+      if (this.memoryScope) {
+        if (!this.runtime.verifyLedger().valid)
+          throw new ApiProblem(409, "MEMORY_INTEGRITY_REJECTED", "Uszkodzony ledger");
+        this.knowledge.assertDocumentIntegrity(document);
+      }
+      json(response, 200, document, correlationId);
       return;
     }
 
     if (request.method === "POST" && route.length === 1 && route[0] === "documents") {
       this.requireScope(auth, "memory:write");
-      const input = memoryInput(await this.readJson(request));
+      const input = memoryInput(await this.readJson(request), this.memoryScope);
       if (input.path === undefined)
         throw new ApiProblem(400, "NIEPRAWIDŁOWE_DANE", "Wymagana ścieżka dokumentu");
       const result = this.knowledge.write(auth.agentId, input);
@@ -625,17 +687,20 @@ export class BrainApiServer {
             query: search,
             brainId: this.runtime.getProgram().brainId,
             ledgerValid: this.runtime.verifyLedger().valid,
-            ...this.knowledge.context(search, maxChars, limit),
+            ...this.knowledge.context(search, maxChars, limit, this.memoryScope !== undefined),
+            operationId: correlationId,
+            ...(this.memoryScope ? { memoryScope: this.memoryScope } : {}),
           },
           correlationId,
         );
       } else {
-        json(
-          response,
-          200,
-          { query: search, memories: this.workspace.search(search, limit) },
-          correlationId,
-        );
+        const memories = this.workspace.search(search, limit);
+        if (this.memoryScope) {
+          if (!this.runtime.verifyLedger().valid)
+            throw new ApiProblem(409, "MEMORY_INTEGRITY_REJECTED", "Uszkodzony ledger");
+          for (const item of memories) this.knowledge.assertDocumentIntegrity(item.document);
+        }
+        json(response, 200, { query: search, memories }, correlationId);
       }
       return;
     }
@@ -645,7 +710,7 @@ export class BrainApiServer {
       (route.join("/") === "brain/remember" || route.join("/") === "brain/observe")
     ) {
       this.requireScope(auth, "memory:write");
-      let input = memoryInput(await this.readJson(request));
+      let input = memoryInput(await this.readJson(request), this.memoryScope);
       if (
         input.path === undefined &&
         input.factKey === undefined &&
@@ -660,7 +725,14 @@ export class BrainApiServer {
       json(
         response,
         result.deduplicated ? 200 : 201,
-        { status: "ZAPAMIĘTANO", ...result },
+        {
+          status: "ZAPAMIĘTANO",
+          ...result,
+          brainId: this.runtime.getProgram().brainId,
+          ledgerValid: this.runtime.verifyLedger().valid,
+          operationId: correlationId,
+          ...(this.memoryScope ? { memoryScope: this.memoryScope } : {}),
+        },
         correlationId,
       );
       return;
@@ -680,6 +752,8 @@ export class BrainApiServer {
       if (!parsed.success)
         throw new ApiProblem(400, "NIEPRAWIDŁOWE_DANE", "Nieprawidłowe dane sesji");
       const { sessionId, projectId, provider } = parsed.data;
+      if (this.memoryScope && projectId !== this.memoryScope.projectId)
+        throw new ApiProblem(403, "MEMORY_SCOPE_DENIED", "Sesja poza projektem backendu");
       json(
         response,
         200,
@@ -708,7 +782,7 @@ export class BrainApiServer {
         this.knowledge.completeSession(
           auth.agentId,
           decodeURIComponent(route[1]),
-          parsed.data.entries.map(memoryInput),
+          parsed.data.entries.map((entry) => memoryInput(entry, this.memoryScope)),
         ),
         correlationId,
       );

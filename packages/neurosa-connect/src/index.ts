@@ -1,16 +1,43 @@
-import { randomUUID } from "node:crypto";
-import type { AgentSession, MemoryWrite } from "@neurosa/document-domain";
+import { createHash, randomUUID } from "node:crypto";
+import type { AgentSession, MemoryWrite, MemoryScope } from "@neurosa/document-domain";
 import { z } from "zod";
 
 export const CONNECT_PROVIDERS = ["chatgpt", "claude", "gemini", "grok", "osa", "other"] as const;
+const scopeSchema = z
+  .object({
+    organizationId: z.string().min(1).max(200),
+    projectId: z.string().min(1).max(200),
+    namespace: z.string().min(1).max(200),
+  })
+  .strict();
+const referenceSchema = z.object({
+  documentId: z.string().min(1),
+  revision: z.number().int().min(1),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  sourceReference: z.string().nullable(),
+  core: z.boolean(),
+  title: z.string().optional(),
+  excerpt: z.string().optional(),
+  offset: z.number().int().min(0).optional(),
+});
 const contextSchema = z.object({
   brainId: z.string(),
   ledgerValid: z.boolean(),
   text: z.string(),
   ledgerHead: z.string(),
-  references: z.array(z.unknown()),
+  references: z.array(referenceSchema),
   truncated: z.boolean(),
+  memoryScope: scopeSchema.optional(),
+  operationId: z.string().min(1).optional(),
 });
+const statusSchema = z.object({
+  brainId: z.string(),
+  ledgerValid: z.boolean(),
+  ledgerHead: z.string().optional(),
+  memoryScope: scopeSchema.optional(),
+  operationId: z.string().min(1).optional(),
+});
+export type BrainHealth = z.infer<typeof statusSchema>;
 export type BrainContext = z.infer<typeof contextSchema>;
 const sessionSchema = z.object({
   sessionId: z.string(),
@@ -25,11 +52,13 @@ export class BrainConnectionError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code = "NEUROSA_ERROR",
   ) {
     super(message);
   }
 }
 export interface ConnectOptions {
+  readonly memoryScope?: MemoryScope;
   readonly baseUrl: string;
   readonly token: string;
   readonly brainId: string;
@@ -38,9 +67,10 @@ export interface ConnectOptions {
   readonly timeoutMs?: number;
 }
 export class NeurosaConnect {
+  private readonly options: ConnectOptions;
   private readonly fetcher: typeof globalThis.fetch;
   private readonly url: string;
-  constructor(private readonly options: ConnectOptions) {
+  constructor(options: ConnectOptions) {
     const url = new URL(options.baseUrl);
     if (url.username || url.password || url.search || url.hash)
       throw new Error("Nieprawidłowy adres Brain API");
@@ -49,44 +79,188 @@ export class NeurosaConnect {
       throw new Error("Zdalne Brain API wymaga HTTPS");
     if (options.token.length < 24 || !options.brainId.trim() || !options.provider.trim())
       throw new Error("Wymagane token, brainId i provider");
+    if (
+      options.timeoutMs !== undefined &&
+      (!Number.isInteger(options.timeoutMs) || options.timeoutMs < 1 || options.timeoutMs > 60000)
+    )
+      throw new Error("Timeout NeurOSA: 1–60000 ms");
+    this.options = Object.freeze({
+      ...options,
+      ...(options.memoryScope
+        ? { memoryScope: Object.freeze(scopeSchema.parse(options.memoryScope)) }
+        : {}),
+    });
     this.url = options.baseUrl.replace(/\/+$/u, "");
     this.fetcher = options.fetch ?? globalThis.fetch;
   }
   async request(path: string, method = "GET", body?: unknown): Promise<unknown> {
-    const response = await this.fetcher(`${this.url}/api/v1/${path}`, {
-      method,
-      redirect: "error",
-      headers: {
-        authorization: `Bearer ${this.options.token}`,
-        "content-type": "application/json",
-        "x-neurosa-brain-id": this.options.brainId,
-      },
-      signal: AbortSignal.timeout(this.options.timeoutMs ?? 15000),
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-    if (!response.ok) {
-      const result = (await response.json().catch(() => null)) as { message?: unknown } | null;
-      throw new BrainConnectionError(
-        response.status,
-        typeof result?.message === "string" ? result.message : `Brain API: HTTP ${response.status}`,
-      );
+    try {
+      const response = await this.fetcher(`${this.url}/api/v1/${path}`, {
+        method,
+        redirect: "error",
+        headers: {
+          authorization: `Bearer ${this.options.token}`,
+          "content-type": "application/json",
+          "x-neurosa-brain-id": this.options.brainId,
+          ...(this.options.memoryScope
+            ? {
+                "x-neurosa-organization-id": encodeURIComponent(
+                  this.options.memoryScope.organizationId,
+                ),
+                "x-neurosa-project-id": encodeURIComponent(this.options.memoryScope.projectId),
+                "x-neurosa-namespace": encodeURIComponent(this.options.memoryScope.namespace),
+              }
+            : {}),
+        },
+        signal: AbortSignal.timeout(this.options.timeoutMs ?? 15000),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+      if (!response.ok) {
+        await response.body?.cancel();
+        throw new BrainConnectionError(
+          response.status,
+          `NeurOSA: HTTP ${response.status}`,
+          response.status === 401 || response.status === 403
+            ? "NEUROSA_ACCESS_DENIED"
+            : "NEUROSA_HTTP_ERROR",
+        );
+      }
+      if (response.status === 204) return null;
+      if (!response.body)
+        throw new BrainConnectionError(502, "Brak odpowiedzi NeurOSA", "NEUROSA_INVALID_RESPONSE");
+      const reader = response.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let size = 0;
+      try {
+        for (;;) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          size += chunk.value.byteLength;
+          if (size > 1024 * 1024) {
+            await reader.cancel();
+            throw new BrainConnectionError(
+              502,
+              "Odpowiedź NeurOSA przekracza 1 MiB",
+              "NEUROSA_RESPONSE_TOO_LARGE",
+            );
+          }
+          chunks.push(chunk.value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+      try {
+        return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+      } catch {
+        throw new BrainConnectionError(
+          502,
+          "Nieprawidłowy JSON NeurOSA",
+          "NEUROSA_INVALID_RESPONSE",
+        );
+      }
+    } catch (error) {
+      if (error instanceof BrainConnectionError) throw error;
+      throw new BrainConnectionError(0, "Nie można połączyć się z NeurOSA", "NEUROSA_UNAVAILABLE");
     }
-    if (response.status === 204) return null;
-    return response.json() as Promise<unknown>;
+  }
+  private checkBinding(result: {
+    brainId: string;
+    ledgerValid: boolean;
+    memoryScope?: MemoryScope | undefined;
+  }): void {
+    if (result.brainId !== this.options.brainId || !result.ledgerValid)
+      throw new BrainConnectionError(
+        409,
+        "Nieprawidłowy mózg lub uszkodzony ledger",
+        "NEUROSA_INTEGRITY_REJECTED",
+      );
+    const scope = this.options.memoryScope;
+    if (
+      scope &&
+      (!result.memoryScope ||
+        (Object.keys(scope) as (keyof MemoryScope)[]).some(
+          (key) => result.memoryScope![key] !== scope[key],
+        ))
+    )
+      throw new BrainConnectionError(
+        403,
+        "Brak zgodnego serwerowego scope pamięci",
+        "NEUROSA_SCOPE_REJECTED",
+      );
+  }
+  async health(): Promise<BrainHealth> {
+    const parsed = statusSchema.safeParse(await this.request("brain/status"));
+    if (!parsed.success)
+      throw new BrainConnectionError(
+        502,
+        "Nieprawidłowy status NeurOSA",
+        "NEUROSA_INVALID_RESPONSE",
+      );
+    this.checkBinding(parsed.data);
+    return parsed.data;
   }
   async status(): Promise<void> {
-    const result = z
-      .object({ brainId: z.string(), ledgerValid: z.boolean() })
-      .parse(await this.request("brain/status"));
-    if (result.brainId !== this.options.brainId || !result.ledgerValid)
-      throw new Error("Nieprawidłowy mózg lub uszkodzony ledger");
+    await this.health();
   }
   async recall(query: string, maxChars = 12000): Promise<BrainContext> {
-    const context = contextSchema.parse(
+    const parsed = contextSchema.safeParse(
       await this.request("brain/recall", "POST", { query, includeCore: true, maxChars }),
     );
-    if (context.brainId !== this.options.brainId || !context.ledgerValid)
-      throw new Error("Nieprawidłowy mózg lub uszkodzony ledger");
+    if (!parsed.success)
+      throw new BrainConnectionError(
+        502,
+        "Nieprawidłowy kontekst NeurOSA",
+        "NEUROSA_INVALID_RESPONSE",
+      );
+    const context = parsed.data;
+    this.checkBinding(context);
+    if (context.text.length > maxChars)
+      throw new BrainConnectionError(
+        502,
+        "Przekroczony budżet kontekstu",
+        "NEUROSA_INVALID_RESPONSE",
+      );
+    if (this.options.memoryScope) {
+      for (const ref of context.references) {
+        const document = z
+          .object({
+            documentId: z.string(),
+            revision: z.number(),
+            contentHash: z.string(),
+            content: z.string(),
+            title: z.string(),
+            sourceReference: z.string().nullable(),
+          })
+          .safeParse(await this.request(`documents/${encodeURIComponent(ref.documentId)}`));
+        if (
+          !document.success ||
+          document.data.documentId !== ref.documentId ||
+          document.data.revision !== ref.revision ||
+          document.data.contentHash !== ref.contentHash ||
+          createHash("sha256").update(document.data.content).digest("hex") !== ref.contentHash ||
+          ref.excerpt === undefined ||
+          ref.offset === undefined ||
+          ref.title !== document.data.title ||
+          ref.sourceReference !== document.data.sourceReference ||
+          document.data.content.slice(ref.offset, ref.offset + ref.excerpt.length) !== ref.excerpt
+        )
+          throw new BrainConnectionError(
+            409,
+            "Niespójna treść źródła NeurOSA",
+            "NEUROSA_INTEGRITY_REJECTED",
+          );
+      }
+      // Only verified excerpts can become agent context, never arbitrary remote text.
+      context.text = context.references
+        .map((ref) => `[${ref.documentId} r${ref.revision}] ${ref.title!}\n${ref.excerpt!}`)
+        .join("\n\n");
+      if (context.text.length > maxChars)
+        throw new BrainConnectionError(
+          502,
+          "Przekroczony budżet źródeł",
+          "NEUROSA_INVALID_RESPONSE",
+        );
+    }
     return context;
   }
   async startSession(

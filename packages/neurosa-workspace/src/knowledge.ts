@@ -5,6 +5,7 @@ import {
   type BrainDocument,
   type KnowledgeRepository,
   type MemoryWrite,
+  type MemoryScope,
 } from "@neurosa/document-domain";
 import { canonicalJson, HashChainLedger } from "@neurosa/event-ledger";
 import type { RuntimeRepository } from "@neurosa/runtime-domain";
@@ -36,6 +37,61 @@ export class SharedKnowledge {
         throw new Error("Uszkodzony ledger: zapis zablokowany");
       return operation();
     });
+  }
+
+  bindScope(scope: MemoryScope | undefined): void {
+    this.repository.atomic(() => {
+      const bindings = this.repository
+        .listEvents()
+        .filter((e) => e.eventType === "MEMORY_SCOPE_BOUND");
+      if (!scope && bindings.length === 0) return;
+      if (!this.repository.verifyLedger().valid) throw new Error("Uszkodzony ledger scope");
+      if (bindings.length) {
+        if (
+          bindings.length !== 1 ||
+          !scope ||
+          knowledgeHash(bindings[0]!.payload) !== knowledgeHash({ brainId: this.brainId, ...scope })
+        )
+          throw new Error(
+            "Baza jest trwale przypisana do innego scope; nie można usunąć ani zmienić przypisania",
+          );
+        return;
+      }
+      const hasHistory = this.repository
+        .listEvents()
+        .some(
+          (event) =>
+            !["BRAIN_LOADED", "RUNTIME_STARTED", "RUNTIME_STATE_RESTORED"].includes(
+              event.eventType,
+            ) || (event.payload as { brainId?: unknown } | null)?.brainId !== this.brainId,
+        );
+      if (
+        hasHistory ||
+        this.repository.listDocuments({ includeArchived: true, includeDeleted: true }).length
+      )
+        throw new Error(
+          "Przypisanie scope wymaga pustej bazy; istniejące dane wymagają osobnego audytu migracji",
+        );
+      this.ledger.append("MEMORY_SCOPE_BOUND", null, { brainId: this.brainId, ...scope! });
+    });
+  }
+
+  /** SHA-256 and a matching event in the existing verified ledger, not an external attestation. */
+  assertDocumentIntegrity(document: BrainDocument): void {
+    const hash = createHash("sha256").update(document.content).digest("hex");
+    if (hash !== document.contentHash) throw new Error("Niespójny hash źródła");
+    const linked = this.repository.listEvents().some((event) => {
+      if (!["MEMORY_WRITTEN", "SOURCE_LINKED", "DOCUMENT_UPDATED"].includes(event.eventType))
+        return false;
+      const payload = event.payload as Record<string, unknown>;
+      return (
+        payload.brainId === this.brainId &&
+        payload.documentId === document.documentId &&
+        payload.revision === document.revision &&
+        payload.contentHash === hash
+      );
+    });
+    if (!linked) throw new Error("Brak powiązania źródła z ledgerem");
   }
 
   session(id: string, agentId: string): AgentSession {
@@ -261,13 +317,14 @@ export class SharedKnowledge {
                 ...(input.pinned === undefined ? {} : { pinned: input.pinned }),
                 ...(input.favorite === undefined ? {} : { favorite: input.favorite }),
                 sourceType: input.source === undefined ? "API" : "FILE_IMPORT",
-                sourceReference: input.source?.id ?? agentId,
+                sourceReference: input.source?.id ?? input.originAgentId ?? agentId,
               })
             : this.workspace.updateDocument(current.documentId, {
                 title: input.title,
                 content: input.content,
               }));
       this.repository.saveMemory(this.brainId, factId ?? document.documentId, {
+        ...(input.originAgentId === undefined ? {} : { originAgentId: input.originAgentId }),
         documentId: document.documentId,
         projectId,
         kind: input.kind ?? "observation",
@@ -296,6 +353,7 @@ export class SharedKnowledge {
         {
           brainId: this.brainId,
           agentId,
+          ...(input.originAgentId === undefined ? {} : { originAgentId: input.originAgentId }),
           sessionId: input.sessionId ?? null,
           projectId,
           kind: input.kind ?? "observation",
@@ -367,8 +425,11 @@ export class SharedKnowledge {
     query: string,
     maxChars = 12000,
     limit = 10,
+    verifySources = false,
   ): { text: string; references: readonly unknown[]; ledgerHead: string; truncated: boolean } {
     return this.repository.atomic(() => {
+      if (verifySources && !this.repository.verifyLedger().valid)
+        throw new Error("Uszkodzony ledger");
       const pinned = this.repository.listDocuments().filter((doc) => doc.pinned);
       const memories = this.workspace.search(query, limit);
       const candidates = [...pinned, ...memories.map((item) => item.document)];
@@ -381,6 +442,7 @@ export class SharedKnowledge {
       for (const document of candidates) {
         if (seen.has(document.documentId)) continue;
         seen.add(document.documentId);
+        if (verifySources) this.assertDocumentIntegrity(document);
         const header = `\n[${document.documentId} r${document.revision}] ${document.title}\n`;
         const available =
           Math.min(maxChars - text.length, document.pinned ? coreRemaining : maxChars) -
@@ -402,6 +464,7 @@ export class SharedKnowledge {
           contentHash: document.contentHash,
           sourceReference: document.sourceReference,
           core: document.pinned,
+          ...(verifySources ? { title: document.title, excerpt, offset } : {}),
         });
       }
       return { text: text.slice(0, maxChars), references, ledgerHead: head, truncated };

@@ -107,3 +107,7 @@ pnpm smoke
 Repozytorium jest funkcjonalną rekonstrukcją po utracie wcześniejszego, niewypchniętego workspace scratch. Nie deklaruje odzyskania dawnych obiektów Git ani identycznych źródeł.
 
 Pełne zamknięte decyzje techniczne znajdują się w [Architecture Lock](docs/NEUROSA_HB_ARCHITECTURE_LOCK.md).
+
+## NeurOSA Memory Connector
+
+Uniwersalny pakiet `@osatech/neurosa-memory`: `remember`, `recall`, `health`, neutralne hooki oraz ten sam Brain API przez HTTP/MCP. [Integracja i instalacja](packages/neurosa-memory/README.md) · [Dowody testów v0.1](docs/NEUROSA_UNIVERSAL_MEMORY_VERIFICATION.md).

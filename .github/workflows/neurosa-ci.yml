@@ -2,7 +2,7 @@ name: NeurOSA — testy i kontener
 
 on:
   push:
-    branches: [main, build/neurosa-ingest-connect]
+    branches: [main, build/neurosa-ingest-connect, "build/neurosa-universal-memory-*"]
   pull_request:
     branches: [main]
 
@@ -45,6 +45,9 @@ jobs:
             pnpm compile
             pnpm build
             pnpm smoke
+            mkdir -p /tmp/neurosa-packages
+            npm pack ./packages/neurosa-memory --ignore-scripts --pack-destination /tmp/neurosa-packages
+            node --import tsx tests/e2e/universal-memory.ts /tmp/neurosa-packages/osatech-neurosa-memory-0.1.0.tgz /tmp/neurosa-evidence/universal-memory.json
             git diff --exit-code
           } 2>&1 | tee /tmp/neurosa-evidence/quality.log
       - name: Zachowaj dowody

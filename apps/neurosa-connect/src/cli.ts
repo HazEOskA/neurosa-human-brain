@@ -14,6 +14,15 @@ try {
     token: required("NEUROSA_API_TOKEN"),
     brainId: required("NEUROSA_BRAIN_ID"),
     provider: process.env.NEUROSA_PROVIDER ?? "other",
+    ...(process.env.NEUROSA_MEMORY_NAMESPACE
+      ? {
+          memoryScope: {
+            namespace: process.env.NEUROSA_MEMORY_NAMESPACE,
+            organizationId: required("NEUROSA_ORGANIZATION_ID"),
+            projectId: required("NEUROSA_PROJECT_ID"),
+          },
+        }
+      : {}),
   });
   const ingest = new NeurosaIngest(client, process.env.NEUROSA_PROJECT_ID ?? "shared");
   if (command === "mcp") await serveStdio(client);

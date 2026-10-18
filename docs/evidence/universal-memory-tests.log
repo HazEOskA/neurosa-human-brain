@@ -1,0 +1,8 @@
+
+ RUN  v4.1.10 /workspace/scratch/56a8e482f827/neurosa-human-brain
+
+
+ Test Files  16 passed (16)
+      Tests  160 passed (160)
+   Start at  12:03:33
+   Duration  1.68s (transform 1.33s, setup 0ms, import 2.66s, tests 4.36s, environment 2ms)
