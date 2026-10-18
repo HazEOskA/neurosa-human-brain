@@ -44,6 +44,7 @@ export async function landingAcceptance(packagePath: string) {
   let gateway: ReturnType<typeof createMemoryGateway> | undefined;
   let url = "",
     cookie = "";
+  let phase = "setup";
   const cache = join(directory, "agent-connections");
   async function startBackend(port = 0) {
     repository = new SqliteRuntimeRepository(join(directory, "brain.db"));
@@ -86,6 +87,7 @@ export async function landingAcceptance(packagePath: string) {
     });
     assert.equal(response.status, 200);
     cookie = response.headers.get("set-cookie")!.split(";")[0]!;
+    await response.arrayBuffer();
   }
   async function owner(path: string, body?: unknown) {
     const response = await fetch(url + "/connect/api/" + path, {
@@ -207,6 +209,7 @@ export async function landingAcceptance(packagePath: string) {
       ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--offline", resolve(packagePath)],
       { cwd: directory, env: cleanEnv, timeout: 30000 },
     );
+    phase = "L01: start, assets and real health";
     await startBackend();
     await startGateway();
     for (const path of ["/connect", "/connect/app.js", "/connect/style.css"]) {
@@ -226,6 +229,7 @@ export async function landingAcceptance(packagePath: string) {
       packageDownloadMatchesArchive: true,
       privateKeyInBrowserAssets: false,
     };
+    phase = "L02: paired Node agents";
     const writer = await pair("Jeverson"),
       reader = await pair("Hermes", true);
     assert.deepEqual((await owner("state")).activeAgents, []);
@@ -255,6 +259,7 @@ export async function landingAcceptance(packagePath: string) {
       contentHash: first.contentHash,
       recallOperationId: recalled.operationId,
     };
+    phase = "L03: paired Python agents";
     const pythonPair = await pair("Hermes-Python", true);
     const template = await (
       await fetch(url + "/connect/download/python-template.py", {
@@ -301,6 +306,7 @@ export async function landingAcceptance(packagePath: string) {
       sameSourceAndHash: true,
       noThirdPartyPythonDependencies: true,
     };
+    phase = "L04: installed MCP executable";
     const mcpWriter = await pair("Jeverson-MCP");
     const mcpMarker = `Mcp${randomUUID().replaceAll("-", "")}`;
     const mcpKey = randomUUID();
@@ -341,6 +347,7 @@ export async function landingAcceptance(packagePath: string) {
       restartUsesCachedConnectorCredential: true,
       documentId: mcpSaved.documentId,
     };
+    phase = "L05: landing memory self-test";
     const testId = randomUUID(),
       browserTest = await owner("test", { testId });
     assert.equal(browserTest.status, "PASS");
@@ -354,6 +361,7 @@ export async function landingAcceptance(packagePath: string) {
       count,
       modelCalls: 0,
     };
+    phase = "L06: controlled backend outage";
     const backendPort = Number(new URL(backendUrl).port),
       gatewayPort = Number(new URL(url).port);
     await stopBackend();
@@ -378,8 +386,10 @@ export async function landingAcceptance(packagePath: string) {
       ordinaryHostCallbackContinues: true,
       fakeMemory: false,
     };
+    phase = "L07: controlled backend restart";
     await startBackend(backendPort);
     assert.deepEqual((await agent(reader, "recall")).sources, sources);
+    phase = "L07: controlled gateway restart";
     await gateway!.close();
     await startGateway(gatewayPort);
     assert.deepEqual((await agent(reader, "recall")).sources, sources);
@@ -443,6 +453,8 @@ export async function landingAcceptance(packagePath: string) {
       privateApiTokenInAgentCredentialCache: false,
       checks,
     };
+  } catch (error) {
+    throw new Error(`Landing E2E przerwany na etapie ${phase}`, { cause: error });
   } finally {
     await gateway?.close();
     await stopBackend();
