@@ -1,0 +1,187 @@
+{
+  "schema": "neurosa.landing.ci.v0.1.1",
+  "status": "PASS",
+  "recordedAt": "2026-10-18T10:25:16.083Z",
+  "repository": "HazEOskA/neurosa-human-brain",
+  "branch": "build/neurosa-universal-memory-landing-20261018",
+  "testedCodeCommit": "c94c5ded2006d79861f6cd0f83389371ceada178",
+  "testedTree": "c4f3eaaaf97e84ac3369d47f142aa5b3e2da8573",
+  "workflowRunId": 39118975374,
+  "workflowUrl": "https://github.com/HazEOskA/neurosa-human-brain/actions/runs/39118975374",
+  "jobs": [
+    {
+      "id": 117650481043,
+      "name": "Kontener i trwałość danych",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 117650481264,
+      "name": "Kod i integracja",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "checks": {
+    "tests": 169,
+    "testFiles": 17,
+    "buildTasks": 21,
+    "format": "PASS",
+    "eslint": "PASS",
+    "typescript": "PASS",
+    "verticalSlice": "PASS",
+    "canonicalBackendDockerRecreate": "PASS",
+    "dockerCrashRecovery": "PASS",
+    "sourceDigestMatchesLocal": true,
+    "packageDigestMatchesLocal": true,
+    "modelCalls": 0,
+    "mainUnchanged": true,
+    "productionDeployment": "NOT_PERFORMED",
+    "browserVisualQa": "NOT_RUN"
+  },
+  "dockerImageId": "sha256:1a2e3249a030489aba00eca0966cd796514e683bbcdf1385f7d54893d6ecc88f",
+  "landingAcceptance": {
+    "schema": "neurosa.landing.acceptance.v0.1.1",
+    "status": "PASS",
+    "recordedAt": "2026-10-18T10:23:38.703Z",
+    "environment": "isolated local canonical BrainApiServer + SQLite/WAL; separate installed SDK/MCP/Python processes",
+    "cloudAzure": "NOT_TESTED: endpoint and credential unavailable",
+    "browserVisualQa": "NOT_RUN: control-browser capability unavailable; no substituted browser automation",
+    "packageSha256": "3eeb149c701a071255504d3e02251a1d63dd9abd846f19611a644296ccf1c037",
+    "backendAndConnectorSourceSha256": "7c0170525a71a7614e8009e8c13fb6c92b999fdf74e88a066128e1e6644c5052",
+    "modelCalls": 0,
+    "privateApiTokenInAgentCredentialCache": false,
+    "checks": {
+      "L01": {
+        "status": "PASS",
+        "mode": "LIVE_LOCAL_HTTP",
+        "ready": true,
+        "packageDownloadMatchesArchive": true,
+        "privateKeyInBrowserAssets": false
+      },
+      "L02": {
+        "status": "PASS",
+        "separateNodeProcesses": true,
+        "pairingRedeemedOnce": true,
+        "idempotencyAcrossProcesses": true,
+        "documentId": "5908d72d-d8d3-4f98-9ccb-1c337979ff4e",
+        "contentHash": "6330d5a0ac7df4a9e0966a2cdea3d4504cd1535c00acf439365dcad4ed0d2660",
+        "recallOperationId": "5a3b2c6d-4d1d-493b-87de-ca7b56b55890"
+      },
+      "L03": {
+        "status": "PASS",
+        "pythonFreshProcesses": 2,
+        "sameSourceAndHash": true,
+        "noThirdPartyPythonDependencies": true
+      },
+      "L04": {
+        "status": "PASS",
+        "installedMcpExecutable": true,
+        "reusedExistingMcp": true,
+        "freshReadOnlyAgent": true,
+        "restartUsesCachedConnectorCredential": true,
+        "documentId": "e6ad189f-c93a-4cb7-9162-7e43b31dfdb8"
+      },
+      "L05": {
+        "status": "PASS",
+        "landingMemoryTest": true,
+        "syntheticTestIsIdempotent": true,
+        "count": 3,
+        "modelCalls": 0
+      },
+      "L06": {
+        "status": "PASS",
+        "backendOutage": true,
+        "context": "UNAVAILABLE",
+        "ordinaryHostCallbackContinues": true,
+        "freshSessionLoadsCachedCredentialDuringOutage": true,
+        "fakeMemory": false
+      },
+      "L07": {
+        "status": "PASS",
+        "controlledCanonicalBackendRestart": true,
+        "controlledGatewayRestart": true,
+        "sameSourceAndHash": true,
+        "cachedConnectionSurvivesGatewayRestart": true,
+        "productionTouched": false
+      }
+    }
+  },
+  "universalAcceptance": {
+    "schema": "neurosa.universal-memory.acceptance.v0.1",
+    "status": "PASS",
+    "recordedAt": "2026-10-18T10:23:36.100Z",
+    "backend": "canonical BrainApiServer + SqliteRuntimeRepository",
+    "backendAndConnectorSourceSha256": "e28dc3f24302390d10b7b33a55f48f2efcc91bc58c46973b6fd75f2ef18317ba",
+    "nodeVersion": "v24.21.0",
+    "environment": "isolated local process, temporary SQLite/WAL",
+    "cloudAzure": "NOT_TESTED: endpoint and credential unavailable in this session",
+    "installation": "offline npm install of the packed package into a clean temporary project",
+    "packageSha256": "3eeb149c701a071255504d3e02251a1d63dd9abd846f19611a644296ccf1c037",
+    "modelCalls": 0,
+    "tokensInLogs": false,
+    "checks": {
+      "TYPESCRIPT_INSTALL": {
+        "status": "PASS",
+        "noWorkspaceDependencies": true
+      },
+      "T01": {
+        "status": "PASS",
+        "mode": "LIVE_LOCAL_PROCESS",
+        "service": "NEUROSA-HB Brain API",
+        "brainId": "OsaBrain",
+        "operationId": "467b8ad5-4402-4e7e-861f-b892db04e9c1"
+      },
+      "T02": {
+        "status": "PASS",
+        "writer": "jeverson",
+        "documentId": "e5c88d4d-5bdf-4926-9c42-864487e345de",
+        "operationId": "59d867e5-72bf-4604-9162-de5ad2bd8c01"
+      },
+      "T03": {
+        "status": "PASS",
+        "sameDocument": true,
+        "unchangedLedger": true
+      },
+      "T04": {
+        "status": "PASS",
+        "reader": "hermes",
+        "freshNodeProcess": true,
+        "chatHistoryProvided": false,
+        "operationId": "9f4b5525-7c32-4697-b68b-06177b6723bf"
+      },
+      "T05": {
+        "status": "PASS",
+        "documentId": "e5c88d4d-5bdf-4926-9c42-864487e345de",
+        "contentHash": "31a878cf69bbcc4c9b395034f44087aca73cf01762233c357f1e0af37dfac7dc",
+        "ledger": "SERVER_VALIDATED",
+        "externalAttestation": false
+      },
+      "HTTP_PYTHON": {
+        "status": "PASS",
+        "sameSourceAsJavaScript": true,
+        "tokenScope": "read-only"
+      },
+      "T06": {
+        "status": "PASS",
+        "wrongToken": 401,
+        "foreignNamespace": 403,
+        "provenanceDoesNotGrantWrite": 403
+      },
+      "T07": {
+        "status": "PASS",
+        "memoryStatus": "UNAVAILABLE",
+        "ordinaryHostCallbackContinues": true,
+        "fakeMemory": false,
+        "modelCalls": 0
+      },
+      "T08": {
+        "status": "PASS",
+        "restart": "SIGTERM then new process, same SQLite/WAL",
+        "sameSourceAndHash": true,
+        "idempotencySurvivesRestart": true,
+        "documents": 1
+      }
+    }
+  }
+}
