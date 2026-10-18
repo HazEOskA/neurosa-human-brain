@@ -1,12 +1,12 @@
 {
   "schema": "neurosa.landing.acceptance.v0.1.1",
   "status": "PASS",
-  "recordedAt": "2026-10-18T10:15:12.979Z",
+  "recordedAt": "2026-10-18T10:20:49.671Z",
   "environment": "isolated local canonical BrainApiServer + SQLite/WAL; separate installed SDK/MCP/Python processes",
   "cloudAzure": "NOT_TESTED: endpoint and credential unavailable",
   "browserVisualQa": "NOT_RUN: control-browser capability unavailable; no substituted browser automation",
-  "packageSha256": "b280403713fcb77c0e23c6a02c49737750090e15f33e093e687727a157b1c56a",
-  "backendAndConnectorSourceSha256": "b6a4c18f9d41e9e7bc05fc5068b5bd713fc04c3e0617e780c691930e8a9bf320",
+  "packageSha256": "3eeb149c701a071255504d3e02251a1d63dd9abd846f19611a644296ccf1c037",
+  "backendAndConnectorSourceSha256": "7c0170525a71a7614e8009e8c13fb6c92b999fdf74e88a066128e1e6644c5052",
   "modelCalls": 0,
   "privateApiTokenInAgentCredentialCache": false,
   "checks": {
@@ -22,9 +22,9 @@
       "separateNodeProcesses": true,
       "pairingRedeemedOnce": true,
       "idempotencyAcrossProcesses": true,
-      "documentId": "4e2a3c8c-99ae-4aaf-83f5-7409b1cd053c",
-      "contentHash": "dc19a5c9989166b61581c2ca9d8a019c5e5574904ac86a79d651263406caadf3",
-      "recallOperationId": "67611ade-7f0e-40df-a4d9-73d14663bc50"
+      "documentId": "11e3f0b3-6368-45ff-b46c-9ee7b4d08183",
+      "contentHash": "b811698ef1ea2ab431ef2221410d2808af5b914f466f41521a4707ce9bed0294",
+      "recallOperationId": "526959d2-3c53-4214-86bf-ef1212dbff28"
     },
     "L03": {
       "status": "PASS",
@@ -38,7 +38,7 @@
       "reusedExistingMcp": true,
       "freshReadOnlyAgent": true,
       "restartUsesCachedConnectorCredential": true,
-      "documentId": "b6630dc4-c676-49a7-b71e-21603548d689"
+      "documentId": "6987264f-0f00-4e05-aa95-cd7d3bb0eba9"
     },
     "L05": {
       "status": "PASS",
@@ -52,6 +52,7 @@
       "backendOutage": true,
       "context": "UNAVAILABLE",
       "ordinaryHostCallbackContinues": true,
+      "freshSessionLoadsCachedCredentialDuringOutage": true,
       "fakeMemory": false
     },
     "L07": {

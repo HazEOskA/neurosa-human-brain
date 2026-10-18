@@ -373,7 +373,9 @@ describe("Landing: rzeczywisty gateway HTTP → kanoniczny Brain API / SQLite", 
       expect(f.repository.listDocuments()).toHaveLength(1);
       expect((await state()).activeAgents).toEqual([]);
       const second = await f.pair();
-      await connectNeurosaMemory({ ...pair, cacheDirectory: false });
+      const connected = await connectNeurosaMemory({ ...pair, cacheDirectory: false });
+      expect((await state()).activeAgents).toEqual([]);
+      await connected.health();
       expect((await state()).activeAgents).toEqual([
         expect.objectContaining({ connectionId: pair.connectionId }),
       ]);
@@ -389,7 +391,8 @@ describe("Landing: rzeczywisty gateway HTTP → kanoniczny Brain API / SQLite", 
     const f = await fixture();
     try {
       await f.activate();
-      const memory = await connectNeurosaMemory({ ...(await f.pair()), cacheDirectory: false });
+      const options = { ...(await f.pair()), cacheDirectory: join(f.directory, "connection") };
+      const memory = await connectNeurosaMemory(options);
       await memory.remember({
         agentId: "Jeverson",
         content: "before outage",
@@ -397,7 +400,11 @@ describe("Landing: rzeczywisty gateway HTTP → kanoniczny Brain API / SQLite", 
       });
       await f.stopBackend();
       expect((await f.request("/connect/api/state")).status).toBe(502);
-      const context = await memory.beforeMessage({ agentId: "Jeverson", message: "before outage" });
+      const freshSession = await connectNeurosaMemory(options);
+      const context = await freshSession.beforeMessage({
+        agentId: "Jeverson",
+        message: "before outage",
+      });
       expect(context).toMatchObject({
         status: "UNAVAILABLE",
         text: "",

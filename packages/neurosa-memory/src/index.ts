@@ -9,9 +9,9 @@ export type * from "./types.js";
 export type { PairingOptions } from "./pairing.js";
 
 export async function connectNeurosaMemory(options: PairingOptions): Promise<NeurosaMemory> {
-  const memory = createNeurosaMemory(await loadConnection(options));
-  await memory.health();
-  return memory;
+  // Cached credentials allow an optional hook to handle outages in a fresh session.
+  // Only health/read/write operations report backend availability.
+  return createNeurosaMemory(await loadConnection(options));
 }
 
 const label = z.string().trim().min(1).max(200);

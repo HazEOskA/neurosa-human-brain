@@ -3,6 +3,7 @@ import { execFile, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { request as httpRequest, type IncomingHttpHeaders } from "node:http";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -46,6 +47,45 @@ export async function landingAcceptance(packagePath: string) {
     cookie = "";
   let phase = "setup";
   const cache = join(directory, "agent-connections");
+  // The operator is an independent caller, with no connection pool shared with
+  // the gateway's in-process diagnostic SDK. Every request gets a fresh socket.
+  async function operatorRequest(path: string, body?: unknown) {
+    return await new Promise<{ status: number; headers: IncomingHttpHeaders; text: string }>(
+      (done, reject) => {
+        const req = httpRequest(
+          url + "/connect/api/" + path,
+          {
+            agent: false,
+            method: body === undefined ? "GET" : "POST",
+            headers: { origin: url, cookie, "content-type": "application/json" },
+          },
+          (res) => {
+            const chunks: Buffer[] = [];
+            let size = 0;
+            res.on("data", (data: Buffer) => {
+              size += data.length;
+              if (size > 1024 * 1024) {
+                res.destroy(new Error("Za duża odpowiedź testu operatora"));
+                return;
+              }
+              chunks.push(data);
+            });
+            res.once("error", reject);
+            res.once("end", () =>
+              done({
+                status: res.statusCode ?? 0,
+                headers: res.headers,
+                text: Buffer.concat(chunks).toString("utf8"),
+              }),
+            );
+          },
+        );
+        req.once("error", reject);
+        req.setTimeout(15000, () => req.destroy(new Error("Limit czasu operatora testowego")));
+        req.end(body === undefined ? undefined : JSON.stringify(body));
+      },
+    );
+  }
   async function startBackend(port = 0) {
     repository = new SqliteRuntimeRepository(join(directory, "brain.db"));
     runtime = new NeurosaRuntime(repository);
@@ -80,22 +120,16 @@ export async function landingAcceptance(packagePath: string) {
     });
     const address = await gateway.start({ port });
     url = address.url;
-    const response = await fetch(url + "/connect/api/activate", {
-      method: "POST",
-      headers: { origin: url, "content-type": "application/json", connection: "close" },
-      body: JSON.stringify({ code: new URL(address.operatorUrl).hash.slice(8) }),
+    const response = await operatorRequest("activate", {
+      code: new URL(address.operatorUrl).hash.slice(8),
     });
     assert.equal(response.status, 200);
-    cookie = response.headers.get("set-cookie")!.split(";")[0]!;
-    await response.arrayBuffer();
+    cookie = response.headers["set-cookie"]![0]!.split(";")[0]!;
   }
   async function owner(path: string, body?: unknown) {
-    const response = await fetch(url + "/connect/api/" + path, {
-      headers: { origin: url, cookie, "content-type": "application/json", connection: "close" },
-      ...(body === undefined ? {} : { method: "POST", body: JSON.stringify(body) }),
-    });
+    const response = await operatorRequest(path, body);
     assert.equal(response.status, 200);
-    return (await response.json()) as Record<string, unknown>;
+    return JSON.parse(response.text) as Record<string, unknown>;
   }
   async function pair(agentId: string, readOnly = false) {
     return (await owner("pair", { agentId, readOnly })) as unknown as Pair;
@@ -106,7 +140,7 @@ export async function landingAcceptance(packagePath: string) {
       const memory=await connectNeurosaMemory({...p,cacheDirectory:e.NEUROSA_CONNECT_CACHE_DIR});
       let result;
       if(e.TEST_ACTION==="remember") result=await memory.remember({agentId:p.agentId,content:e.TEST_CONTENT,idempotencyKey:e.TEST_KEY});
-      else if(e.TEST_ACTION==="fallback") result=await memory.beforeMessage({agentId:p.agentId,message:e.TEST_QUERY});
+      else if(e.TEST_ACTION==="fallback") result={context:await memory.beforeMessage({agentId:p.agentId,message:e.TEST_QUERY}),hostReply:"Zwykła rozmowa trwa"};
       else result=await memory.recall({agentId:p.agentId,query:e.TEST_QUERY});
       console.log(JSON.stringify(result));`;
     const r = await exec(process.execPath, ["--input-type=module", "--eval", script], {
@@ -365,14 +399,7 @@ export async function landingAcceptance(packagePath: string) {
     const backendPort = Number(new URL(backendUrl).port),
       gatewayPort = Number(new URL(url).port);
     await stopBackend();
-    const fallbackScript = `import {createNeurosaMemory} from "@osatech/neurosa-memory";import {readFileSync} from "node:fs";const c=JSON.parse(readFileSync(process.env.TEST_CACHE_FILE,"utf8"));const memory=createNeurosaMemory(c);const context=await memory.beforeMessage({agentId:"Hermes",message:"test"});console.log(JSON.stringify({context,hostReply:"Zwykła rozmowa trwa"}));`;
-    const cacheFile = join(cache, (await readdir(cache))[0]!);
-    const fallback = await exec(
-      process.execPath,
-      ["--input-type=module", "--eval", fallbackScript],
-      { cwd: directory, env: { ...cleanEnv, TEST_CACHE_FILE: cacheFile }, timeout: 15000 },
-    );
-    const unavailable = JSON.parse(fallback.stdout) as {
+    const unavailable = (await agent(reader, "fallback")) as unknown as {
       context: { status: string; text: string };
       hostReply: string;
     };
@@ -384,6 +411,7 @@ export async function landingAcceptance(packagePath: string) {
       backendOutage: true,
       context: "UNAVAILABLE",
       ordinaryHostCallbackContinues: true,
+      freshSessionLoadsCachedCredentialDuringOutage: true,
       fakeMemory: false,
     };
     phase = "L07: controlled backend restart";

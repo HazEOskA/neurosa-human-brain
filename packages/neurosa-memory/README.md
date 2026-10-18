@@ -33,6 +33,8 @@ const memory = await connectNeurosaMemory({
 await memory.health();
 ```
 
+`connectNeurosaMemory` paruje lub odtwarza konfigurację połączenia; nie ogłasza dostępności pamięci. Zapisane uprawnienie pozwala utworzyć klienta w nowej sesji także podczas awarii backendu. Opcjonalny `beforeMessage()` zwróci wtedy `UNAVAILABLE`, więc host może kontynuować rozmowę. `health()`, `remember()` i `recall()` nadal zwracają rzeczywisty błąd. Pierwsze parowanie bez zapisanego uprawnienia wymaga działającego connectora.
+
 Klucz kanonicznej NeurOSA pozostaje na serwerze connectora. Proces agenta wymienia jednorazowy kod na uprawnienie do konkretnego gatewaya, brain/scope oraz odczytu lub odczytu i zapisu. Podana w zapisie nazwa agenta jest przypinana przez gateway do pochodzenia z parowania. Uprawnienie połączenia jest ważne 30 dni i zapisywane poza repozytorium w `~/.config/neurosa/connections` (plik 0600); nie zawiera trwałej pamięci ani klucza Brain API. Nowy proces nie musi ponownie zużywać kodu. `cacheDirectory` zmienia katalog, a `false` wyłącza zapisywanie uprawnienia. Po wygaśnięciu potrzebny jest nowy kod. Rotacja serwerowego klucza odwołuje wszystkie uprawnienia; v0.1.1 nie ma odwołania pojedynczego uprawnienia.
 
 Przygotowanie serwera raz przez operatora oraz szczegóły izolacji: [landing i połączenie](https://github.com/HazEOskA/neurosa-human-brain/blob/build/neurosa-universal-memory-landing-20261018/docs/NEUROSA_CONNECT_LANDING.md).

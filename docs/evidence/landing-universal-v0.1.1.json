@@ -1,14 +1,14 @@
 {
   "schema": "neurosa.universal-memory.acceptance.v0.1",
   "status": "PASS",
-  "recordedAt": "2026-10-18T10:07:52.802Z",
+  "recordedAt": "2026-10-18T10:20:47.434Z",
   "backend": "canonical BrainApiServer + SqliteRuntimeRepository",
-  "backendAndConnectorSourceSha256": "e0df00d0331249910809ae23e8ca14c0e3169d479b97dd9639d6938771354008",
+  "backendAndConnectorSourceSha256": "e28dc3f24302390d10b7b33a55f48f2efcc91bc58c46973b6fd75f2ef18317ba",
   "nodeVersion": "v24.19.0",
   "environment": "isolated local process, temporary SQLite/WAL",
   "cloudAzure": "NOT_TESTED: endpoint and credential unavailable in this session",
   "installation": "offline npm install of the packed package into a clean temporary project",
-  "packageSha256": "b280403713fcb77c0e23c6a02c49737750090e15f33e093e687727a157b1c56a",
+  "packageSha256": "3eeb149c701a071255504d3e02251a1d63dd9abd846f19611a644296ccf1c037",
   "modelCalls": 0,
   "tokensInLogs": false,
   "checks": {
@@ -21,13 +21,13 @@
       "mode": "LIVE_LOCAL_PROCESS",
       "service": "NEUROSA-HB Brain API",
       "brainId": "OsaBrain",
-      "operationId": "8c4b4431-e195-4abb-9459-4c1e9044bc20"
+      "operationId": "3790ffd8-7066-4b22-93ab-7525742f80cf"
     },
     "T02": {
       "status": "PASS",
       "writer": "jeverson",
-      "documentId": "ae3c8a1b-41f4-4885-82af-ad6696f6e4e9",
-      "operationId": "0d616db8-e20b-4980-a0e2-6ba812d92668"
+      "documentId": "b84ba64a-ed76-45dc-aa0c-d016b794dcd1",
+      "operationId": "910bebec-100f-463a-a500-400565b115a1"
     },
     "T03": {
       "status": "PASS",
@@ -39,12 +39,12 @@
       "reader": "hermes",
       "freshNodeProcess": true,
       "chatHistoryProvided": false,
-      "operationId": "ec135b10-06f9-4181-a055-47f8a075db95"
+      "operationId": "2ce18a2d-1077-461d-ae0d-cb3a586c4fa4"
     },
     "T05": {
       "status": "PASS",
-      "documentId": "ae3c8a1b-41f4-4885-82af-ad6696f6e4e9",
-      "contentHash": "dad52cde6bee183be59f695c15db500725444668f8764816e2ed6424b65272cc",
+      "documentId": "b84ba64a-ed76-45dc-aa0c-d016b794dcd1",
+      "contentHash": "b09f33d6a65dc6cdc11bee7ca322b08f5b2d34405fe1e3497fa42d7141abf874",
       "ledger": "SERVER_VALIDATED",
       "externalAttestation": false
     },
