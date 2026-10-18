@@ -1,0 +1,66 @@
+{
+  "schema": "neurosa.landing.acceptance.v0.1.1",
+  "status": "PASS",
+  "recordedAt": "2026-10-18T10:08:52.320Z",
+  "environment": "isolated local canonical BrainApiServer + SQLite/WAL; separate installed SDK/MCP/Python processes",
+  "cloudAzure": "NOT_TESTED: endpoint and credential unavailable",
+  "browserVisualQa": "NOT_RUN: control-browser capability unavailable; no substituted browser automation",
+  "packageSha256": "b280403713fcb77c0e23c6a02c49737750090e15f33e093e687727a157b1c56a",
+  "backendAndConnectorSourceSha256": "750ab5b6c54d92af1c44ad1e4890552de214bef0fc9e96b5653d2dd94fda62d3",
+  "modelCalls": 0,
+  "privateApiTokenInAgentCredentialCache": false,
+  "checks": {
+    "L01": {
+      "status": "PASS",
+      "mode": "LIVE_LOCAL_HTTP",
+      "ready": true,
+      "packageDownloadMatchesArchive": true,
+      "privateKeyInBrowserAssets": false
+    },
+    "L02": {
+      "status": "PASS",
+      "separateNodeProcesses": true,
+      "pairingRedeemedOnce": true,
+      "idempotencyAcrossProcesses": true,
+      "documentId": "d514e7ad-16a5-49a8-8a4c-55e92d9b46b5",
+      "contentHash": "ffbcb711a3b53c76eb73ed9120be5327e8f03a0ce3c418ba1d1f03d4bac7ad4b",
+      "recallOperationId": "85ee7b18-ffc0-4b2a-8c42-bdc5b561abdf"
+    },
+    "L03": {
+      "status": "PASS",
+      "pythonFreshProcesses": 2,
+      "sameSourceAndHash": true,
+      "noThirdPartyPythonDependencies": true
+    },
+    "L04": {
+      "status": "PASS",
+      "installedMcpExecutable": true,
+      "reusedExistingMcp": true,
+      "freshReadOnlyAgent": true,
+      "restartUsesCachedConnectorCredential": true,
+      "documentId": "9e5264fe-8e60-446d-b0d8-765c19ae0c59"
+    },
+    "L05": {
+      "status": "PASS",
+      "landingMemoryTest": true,
+      "syntheticTestIsIdempotent": true,
+      "count": 3,
+      "modelCalls": 0
+    },
+    "L06": {
+      "status": "PASS",
+      "backendOutage": true,
+      "context": "UNAVAILABLE",
+      "ordinaryHostCallbackContinues": true,
+      "fakeMemory": false
+    },
+    "L07": {
+      "status": "PASS",
+      "controlledCanonicalBackendRestart": true,
+      "controlledGatewayRestart": true,
+      "sameSourceAndHash": true,
+      "cachedConnectionSurvivesGatewayRestart": true,
+      "productionTouched": false
+    }
+  }
+}

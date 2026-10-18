@@ -2,8 +2,17 @@ import { createHash, randomUUID } from "node:crypto";
 import { BrainConnectionError, NeurosaConnect } from "@neurosa/connect";
 import { z } from "zod";
 import type { MemoryIntegrity, NeurosaMemory, NeurosaMemoryOptions } from "./types.js";
+import type { PairingOptions } from "./pairing.js";
+import { loadConnection } from "./connection.js";
 
 export type * from "./types.js";
+export type { PairingOptions } from "./pairing.js";
+
+export async function connectNeurosaMemory(options: PairingOptions): Promise<NeurosaMemory> {
+  const memory = createNeurosaMemory(await loadConnection(options));
+  await memory.health();
+  return memory;
+}
 
 const label = z.string().trim().min(1).max(200);
 const rememberSchema = z

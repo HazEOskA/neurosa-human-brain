@@ -1,0 +1,305 @@
+Checking formatting...
+All matched files use Prettier code style!
+
+ RUN  v4.1.10 /workspace/scratch/56a8e482f827/neurosa-human-brain
+
+
+ Test Files  17 passed (17)
+      Tests  169 passed (169)
+   Start at  13:07:26
+   Duration  1.69s (transform 1.55s, setup 0ms, import 3.08s, tests 5.07s, environment 2ms)
+
+Program NEUROSA-HB jest poprawny: OsaBrain
+{
+  "version": "0.1",
+  "brainId": "OsaBrain",
+  "regions": [
+    {
+      "id": "ProjectMemory",
+      "neuronIds": [
+        "BrainArchitecture",
+        "HydraLab"
+      ]
+    }
+  ],
+  "neurons": [
+    {
+      "id": "BrainArchitecture",
+      "regionId": "ProjectMemory",
+      "type": "DECISION",
+      "title": "NEUROSA-HB Architecture",
+      "sourcePath": "projects/brain.md",
+      "excerpt": "",
+      "threshold": 0.72,
+      "restingPotential": -0.65,
+      "salience": 0.9,
+      "confidence": 0.95,
+      "enabled": true
+    },
+    {
+      "id": "HydraLab",
+      "regionId": "ProjectMemory",
+      "type": "SYSTEM",
+      "title": "HydraLab",
+      "sourcePath": "projects/hydra-lab.md",
+      "excerpt": "",
+      "threshold": 0.61,
+      "restingPotential": 0,
+      "salience": 0.5,
+      "confidence": 1,
+      "enabled": true
+    }
+  ],
+  "synapses": [
+    {
+      "id": "ProjectMemory/BrainArchitecture->HydraLab#1",
+      "regionId": "ProjectMemory",
+      "sourceNeuronId": "BrainArchitecture",
+      "targetNeuronId": "HydraLab",
+      "relationType": "PART_OF",
+      "mode": "EXCITATORY",
+      "neurotransmitter": "GLUTAMATE",
+      "receptor": "CONTEXTUAL",
+      "weight": 0.64,
+      "confidence": 0.9,
+      "transmissionDelayMs": 12,
+      "decayRate": 0.01,
+      "plasticity": "HEBBIAN"
+    }
+  ],
+  "proteins": [],
+  "pathways": [],
+  "policies": [],
+  "sourceHash": "f4018ba2be13559a16bb570e3ef0c3377ce5e750b798b44abed79e2635346137"
+}
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown project config "strict-peer-dependencies". This will stop working in the next major version of npm.
+
+> neurosa-human-brain@0.1.0 build
+> NEXT_TELEMETRY_DISABLED=1 TURBO_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1 turbo run build --force
+
+• turbo 2.10.8
+
+   • Packages in scope: @neurosa/activation, @neurosa/ast, @neurosa/brain-api, @neurosa/brain-visualization, @neurosa/brain-web, @neurosa/cli, @neurosa/compiler, @neurosa/connect, @neurosa/document-domain, @neurosa/event-ledger, @neurosa/ingest, @neurosa/ir, @neurosa/lexer, @neurosa/neural-runtime, @neurosa/parser, @neurosa/runtime-domain, @neurosa/semantic-analysis, @neurosa/shared-config, @neurosa/storage, @neurosa/type-checker, @neurosa/workspace, @osatech/neurosa-memory
+   • Running build in 22 packages
+   • Remote caching disabled
+
+@neurosa/document-domain:build: cache bypass, force executing 570b45964b987f1d
+@neurosa/brain-visualization:build: cache bypass, force executing 123cc67d31b36f6b
+@neurosa/ir:build: cache bypass, force executing bac36d4946aa9117
+@neurosa/ast:build: cache bypass, force executing 218c23414295b96a
+@neurosa/document-domain:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/ir:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/ast:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/brain-visualization:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/connect:build: cache bypass, force executing f05ce43fa3ad0c04
+@neurosa/brain-web:build: cache bypass, force executing 273c6485cbecf34c
+@neurosa/semantic-analysis:build: cache bypass, force executing d3347d80c5ce09cd
+@neurosa/type-checker:build: cache bypass, force executing 6ad8313177ca3fab
+@neurosa/lexer:build: cache bypass, force executing 4024a2ec755a80d4
+@neurosa/runtime-domain:build: cache bypass, force executing 4cdc885e9a841a39
+@neurosa/connect:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/brain-web:build: $ next build
+@neurosa/type-checker:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/semantic-analysis:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/runtime-domain:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/lexer:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/brain-web:build: ▲ Next.js 16.2.12 (Turbopack)
+@neurosa/brain-web:build: 
+@neurosa/brain-web:build:   Creating an optimized production build ...
+@neurosa/ingest:build: cache bypass, force executing 994cbc50d09d7e4a
+@osatech/neurosa-memory:build: cache bypass, force executing dcf67e04e97634ac
+@neurosa/parser:build: cache bypass, force executing 115136bda1d9096a
+@neurosa/event-ledger:build: cache bypass, force executing 679e42418679c420
+@osatech/neurosa-memory:build: $ node --import tsx build.ts
+@neurosa/ingest:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/parser:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/event-ledger:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/brain-web:build: ✓ Compiled successfully in 4.5s
+@neurosa/brain-web:build:   Running TypeScript ...
+@neurosa/compiler:build: cache bypass, force executing 6bb7f15299d00b7b
+@neurosa/workspace:build: cache bypass, force executing eab542535e5feed2
+@neurosa/storage:build: cache bypass, force executing 4fc9a12f5c35be01
+@neurosa/activation:build: cache bypass, force executing f64c19b820e77793
+@neurosa/workspace:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/activation:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/compiler:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/storage:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/brain-web:build:   Finished TypeScript in 3.6s ...
+@neurosa/brain-web:build:   Collecting page data using 4 workers ...
+@neurosa/brain-web:build:   Generating static pages using 4 workers (0/3) ...
+@neurosa/brain-web:build: ✓ Generating static pages using 4 workers (3/3) in 533ms
+@neurosa/brain-web:build:   Finalizing page optimization ...
+@neurosa/brain-web:build: 
+@neurosa/brain-web:build: Route (app)
+@neurosa/brain-web:build: ┌ ○ /
+@neurosa/brain-web:build: └ ○ /_not-found
+@neurosa/brain-web:build: 
+@neurosa/brain-web:build: 
+@neurosa/brain-web:build: ○  (Static)  prerendered as static content
+@neurosa/brain-web:build: 
+@neurosa/neural-runtime:build: cache bypass, force executing f25b0f66f23f9d73
+@neurosa/neural-runtime:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/cli:build: cache bypass, force executing b75b4356dbfa5b75
+@neurosa/brain-api:build: cache bypass, force executing 7972c1d5074579f1
+@neurosa/brain-api:build: $ tsc --noEmit -p ../../tsconfig.json
+@neurosa/cli:build: $ tsc --noEmit -p ../../tsconfig.json
+
+ Tasks:    21 successful, 21 total
+Cached:    0 cached, 21 total
+  Time:    20.558s 
+
+ WARNING  no output files found for task @neurosa/activation#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/ast#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/brain-api#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/brain-visualization#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/cli#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/compiler#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/connect#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/document-domain#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/event-ledger#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/ingest#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/ir#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/lexer#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/neural-runtime#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/parser#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/runtime-domain#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/semantic-analysis#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/storage#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/type-checker#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @neurosa/workspace#build. Please check your `outputs` key in `turbo.json`
+Vertical slice Checkpointu 4: POPRAWNY
+Mózg: OsaBrain
+Aktywacja: checkpoint-4-smoke
+Dostarczone impulsy: 2
+Restart i weryfikacja ledgeru: POPRAWNE
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown project config "strict-peer-dependencies". This will stop working in the next major version of npm.
+npm notice
+npm notice 📦  @osatech/neurosa-memory@0.1.1
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 12.6kB README.md
+npm notice 341.2kB dist/cli.js
+npm notice 489B dist/index.d.ts
+npm notice 340.5kB dist/index.js
+npm notice 542B dist/pairing.d.ts
+npm notice 3.6kB dist/types.d.ts
+npm notice 4.5kB examples/memory.py
+npm notice 2.8kB examples/pairing.py
+npm notice 909B package.json
+npm notice Tarball Details
+npm notice name: @osatech/neurosa-memory
+npm notice version: 0.1.1
+npm notice filename: osatech-neurosa-memory-0.1.1.tgz
+npm notice package size: 148.0 kB
+npm notice unpacked size: 708.1 kB
+npm notice shasum: 6b024b7e5e884c17865c268a87cb57663c0e82c9
+npm notice integrity: sha512-B6ArqzldzRmlk[...]UojrK+yNETKKA==
+npm notice total files: 10
+npm notice
+osatech-neurosa-memory-0.1.1.tgz
+{
+  "schema": "neurosa.universal-memory.acceptance.v0.1",
+  "status": "PASS",
+  "recordedAt": "2026-10-18T10:07:52.802Z",
+  "backend": "canonical BrainApiServer + SqliteRuntimeRepository",
+  "backendAndConnectorSourceSha256": "e0df00d0331249910809ae23e8ca14c0e3169d479b97dd9639d6938771354008",
+  "nodeVersion": "v24.19.0",
+  "environment": "isolated local process, temporary SQLite/WAL",
+  "cloudAzure": "NOT_TESTED: endpoint and credential unavailable in this session",
+  "installation": "offline npm install of the packed package into a clean temporary project",
+  "packageSha256": "b280403713fcb77c0e23c6a02c49737750090e15f33e093e687727a157b1c56a",
+  "modelCalls": 0,
+  "tokensInLogs": false,
+  "checks": {
+    "TYPESCRIPT_INSTALL": {
+      "status": "PASS",
+      "noWorkspaceDependencies": true
+    },
+    "T01": {
+      "status": "PASS",
+      "mode": "LIVE_LOCAL_PROCESS",
+      "service": "NEUROSA-HB Brain API",
+      "brainId": "OsaBrain",
+      "operationId": "8c4b4431-e195-4abb-9459-4c1e9044bc20"
+    },
+    "T02": {
+      "status": "PASS",
+      "writer": "jeverson",
+      "documentId": "ae3c8a1b-41f4-4885-82af-ad6696f6e4e9",
+      "operationId": "0d616db8-e20b-4980-a0e2-6ba812d92668"
+    },
+    "T03": {
+      "status": "PASS",
+      "sameDocument": true,
+      "unchangedLedger": true
+    },
+    "T04": {
+      "status": "PASS",
+      "reader": "hermes",
+      "freshNodeProcess": true,
+      "chatHistoryProvided": false,
+      "operationId": "ec135b10-06f9-4181-a055-47f8a075db95"
+    },
+    "T05": {
+      "status": "PASS",
+      "documentId": "ae3c8a1b-41f4-4885-82af-ad6696f6e4e9",
+      "contentHash": "dad52cde6bee183be59f695c15db500725444668f8764816e2ed6424b65272cc",
+      "ledger": "SERVER_VALIDATED",
+      "externalAttestation": false
+    },
+    "HTTP_PYTHON": {
+      "status": "PASS",
+      "sameSourceAsJavaScript": true,
+      "tokenScope": "read-only"
+    },
+    "T06": {
+      "status": "PASS",
+      "wrongToken": 401,
+      "foreignNamespace": 403,
+      "provenanceDoesNotGrantWrite": 403
+    },
+    "T07": {
+      "status": "PASS",
+      "memoryStatus": "UNAVAILABLE",
+      "ordinaryHostCallbackContinues": true,
+      "fakeMemory": false,
+      "modelCalls": 0
+    },
+    "T08": {
+      "status": "PASS",
+      "restart": "SIGTERM then new process, same SQLite/WAL",
+      "sameSourceAndHash": true,
+      "idempotencySurvivesRestart": true,
+      "documents": 1
+    }
+  }
+}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+[TypeError: fetch failed] {
+  [cause]: SocketError: other side closed
+      at Socket.onHttpSocketEnd (node:internal/deps/undici/undici:7833:26)
+      at Socket.emit (node:events:521:24)
+      at endReadableNT (node:internal/streams/readable:1736:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'UND_ERR_SOCKET',
+    socket: {
+      localAddress: '127.0.0.1',
+      localPort: 45174,
+      remoteAddress: undefined,
+      remotePort: undefined,
+      remoteFamily: undefined,
+      timeout: undefined,
+      bytesWritten: 5956,
+      bytesRead: 173843
+    }
+  }
+}
+
+Node.js v24.19.0

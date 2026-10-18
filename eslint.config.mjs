@@ -25,4 +25,31 @@ export default tseslint.config(
       "@typescript-eslint/consistent-type-imports": "error",
     },
   },
+  {
+    files: ["apps/neurosa-connect/web/app.js"],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: Object.fromEntries(
+        [
+          "document",
+          "fetch",
+          "AbortSignal",
+          "setTimeout",
+          "setInterval",
+          "navigator",
+          "Blob",
+          "URL",
+          "URLSearchParams",
+          "crypto",
+          "location",
+          "history",
+          "matchMedia",
+          "devicePixelRatio",
+          "requestAnimationFrame",
+          "cancelAnimationFrame",
+          "ResizeObserver",
+        ].map((name) => [name, "readonly"]),
+      ),
+    },
+  },
 );

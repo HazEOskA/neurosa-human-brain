@@ -1,4 +1,4 @@
-# NeurOSA Memory Connector v0.1
+# NeurOSA Memory Connector v0.1.1
 
 `@osatech/neurosa-memory` — jedna NeurOSA, dowolny agent, pamięć między sesjami.
 
@@ -10,6 +10,32 @@ flowchart TD
 ```
 
 Pakiet jest małą fasadą nad istniejącym `@neurosa/connect`. Nie ma własnej bazy, cache pamięci, modelu, logowania użytkowników ani panelu. Kod wykonywany jest na backendzie. Python i inne języki używają tego samego Brain API przez HTTP. Backend repozytorium wymaga Node 24+, sam pakiet Node 20+.
+
+## Podłączenie z landingu
+
+1. Otwórz prywatny link połączenia przekazany przez operatora NeurOSA.
+2. Wpisz nazwę agenta i wybierz MCP, JavaScript lub Python.
+3. Skopiuj konfigurację albo pobierz gotowy plik. Uruchom agenta przed upływem 5 minut.
+
+Nie potrzebujesz Cloud Shell ani klucza do kanonicznego Brain API. Landing potwierdza połączenie po pierwszym rzeczywistym żądaniu agenta. „Test pamięci” zapisuje jeden syntetyczny fakt, odczytuje go nowym klientem i pokazuje dokument/hash. Nie uruchamia modelu.
+
+MCP wymaga aplikacji obsługującej serwery MCP oraz lokalnego Node.js/npm. Gotowa konfiguracja uruchamia **istniejący** serwer MCP spakowany w ten pakiet. JavaScript instaluje `.tgz` udostępniony przez connector; Python pobiera kompletny moduł bez dodatkowych bibliotek. Pakiet nie jest jeszcze opublikowany w npm.
+
+```javascript
+import { connectNeurosaMemory } from "@osatech/neurosa-memory";
+
+// Konfigurację przygotowuje landing. Wykonaj ten kod w procesie agenta.
+const memory = await connectNeurosaMemory({
+  connectorUrl: "https://twoj-connector.example",
+  pairingCode: "jednorazowy-kod-z-landingu",
+  agentId: "Jeverson",
+});
+await memory.health();
+```
+
+Klucz kanonicznej NeurOSA pozostaje na serwerze connectora. Proces agenta wymienia jednorazowy kod na uprawnienie do konkretnego gatewaya, brain/scope oraz odczytu lub odczytu i zapisu. Podana w zapisie nazwa agenta jest przypinana przez gateway do pochodzenia z parowania. Uprawnienie połączenia jest ważne 30 dni i zapisywane poza repozytorium w `~/.config/neurosa/connections` (plik 0600); nie zawiera trwałej pamięci ani klucza Brain API. Nowy proces nie musi ponownie zużywać kodu. `cacheDirectory` zmienia katalog, a `false` wyłącza zapisywanie uprawnienia. Po wygaśnięciu potrzebny jest nowy kod. Rotacja serwerowego klucza odwołuje wszystkie uprawnienia; v0.1.1 nie ma odwołania pojedynczego uprawnienia.
+
+Przygotowanie serwera raz przez operatora oraz szczegóły izolacji: [landing i połączenie](https://github.com/HazEOskA/neurosa-human-brain/blob/build/neurosa-universal-memory-landing-20261018/docs/NEUROSA_CONNECT_LANDING.md).
 
 ## Instalacja
 
@@ -25,7 +51,7 @@ npm pack ./packages/neurosa-memory --ignore-scripts --pack-destination .neurosa/
 W projekcie agenta:
 
 ```bash
-npm install /sciezka/osatech-neurosa-memory-0.1.0.tgz
+npm install /sciezka/osatech-neurosa-memory-0.1.1.tgz
 ```
 
 Archiwum zawiera JavaScript ESM, deklaracje TypeScript i przykłady; nie wymaga workspace ani dodatkowych zależności w runtime. Nazwa pakietu nie oznacza rezerwacji namespace w publicznym npm.
@@ -119,7 +145,7 @@ Tokeny potrzebują `brain:read`, `memory:read`, a zapis dodatkowo `memory:write`
 
 ## HTTP i Python
 
-Używane są istniejące endpointy, bez nowego serwera pośredniego:
+Używane są istniejące endpointy bezpośrednio albo przez opcjonalny gateway landingu. Gateway przypina tożsamość/scope i przekazuje operacje do tej samej NeurOSA; nie ma własnego silnika pamięci:
 
 | Operacja | Metoda i ścieżka                    | Pola                                                     |
 | -------- | ----------------------------------- | -------------------------------------------------------- |
@@ -132,7 +158,7 @@ Nagłówki: `Authorization: Bearer <token>`, `x-neurosa-brain-id`, `x-neurosa-or
 
 ## Istniejący MCP
 
-Nie dodano drugiego serwera MCP. Dotychczasowy `pnpm connect mcp` korzysta z tego samego Connect i Brain API. Ustaw dodatkowo `NEUROSA_API_URL`, `NEUROSA_API_TOKEN`, `NEUROSA_BRAIN_ID` oraz te same trzy zmienne scope. Dostępne są istniejące `neurosa_start_session`, `neurosa_recall`, `neurosa_remember`, `neurosa_complete_session`. W przypisanym trybie recall sprawdza źródła także dla MCP. Brak OAuth, passkeys i ekranów logowania.
+Nie dodano drugiego serwera MCP. Landing przygotowuje konfigurację `neurosa-memory mcp`, która pakuje i uruchamia dotychczasowe `serveStdio`. Dotychczasowy `pnpm connect mcp` nadal korzysta z tego samego Connect i Brain API; dla bezpośredniego trybu ustaw serwerowe `NEUROSA_API_URL`, `NEUROSA_API_TOKEN`, `NEUROSA_BRAIN_ID` oraz trzy zmienne scope. Dostępne są istniejące `neurosa_start_session`, `neurosa_recall`, `neurosa_remember`, `neurosa_complete_session`. Agent read-only używa `neurosa_recall`; tworzenie/zamykanie sesji wymaga zapisu. W przypisanym trybie recall sprawdza źródła także dla MCP. Brak OAuth, passkeys i ekranów logowania.
 
 ## Integralność i dowody
 
@@ -145,8 +171,11 @@ pnpm lint
 pnpm --filter @osatech/neurosa-memory build
 npm pack ./packages/neurosa-memory --ignore-scripts --pack-destination .neurosa/packages
 node --import tsx tests/e2e/universal-memory.ts \
-  .neurosa/packages/osatech-neurosa-memory-0.1.0.tgz \
+  .neurosa/packages/osatech-neurosa-memory-0.1.1.tgz \
   .neurosa/universal-memory-evidence.json
+node --import tsx tests/e2e/landing.ts \
+  .neurosa/packages/osatech-neurosa-memory-0.1.1.tgz \
+  .neurosa/landing-evidence.json
 ```
 
 Test akceptacyjny instaluje archiwum offline w czystym projekcie, uruchamia prawdziwy entrypoint Brain API z SQLite/WAL i uruchamia Jeverson/Hermes jako oddzielne procesy bez historii czatu. T07 sprawdza hook i zwykły callback hosta; nie udaje rozmowy z modelem. Restart dotyczy wyłącznie procesu i bazy utworzonych przez test. Nigdy nie używa produkcyjnego tokenu ani istniejącej bazy.

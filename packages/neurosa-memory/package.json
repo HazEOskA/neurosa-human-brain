@@ -1,6 +1,6 @@
 {
   "name": "@osatech/neurosa-memory",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "NeurOSA Memory Connector — jedna pamięć, dowolny agent",
   "type": "module",
   "license": "MIT",
@@ -15,6 +15,9 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "neurosa-memory": "./dist/cli.js"
+  },
   "files": [
     "dist",
     "README.md",

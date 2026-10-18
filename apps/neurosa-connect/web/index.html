@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#080a0b" />
+    <title>NeurOSA — pamięć, która zostaje</title>
+    <meta
+      name="description"
+      content="Jedna pamięć dla Twoich agentów. Podłącz NeurOSA przez MCP, JavaScript lub Python i sprawdź źródło każdego odczytu."
+    />
+    <link rel="stylesheet" href="/connect/style.css" />
+    <script src="/connect/app.js" defer></script>
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+    <header class="nav">
+      <a class="brand" href="/connect" aria-label="NeurOSA — strona główna"
+        ><span class="brand-mark" aria-hidden="true">N<span>◦</span></span
+        >Neur<span>OSA</span></a
+      >
+      <nav aria-label="Główna">
+        <a href="#jak-dziala">Jak to działa</a
+        ><a href="#polacz" class="nav-cta">Podłącz agenta <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="dot"></span> PAMIĘĆ DLA TWOICH AGENTÓW</p>
+          <h1 id="hero-title">Nowa rozmowa.<br /><span>Ten sam kontekst.</span></h1>
+          <p class="hero-description">
+            Jeden agent zapamiętuje. Drugi wie, gdzie wrócić.<br />NeurOSA łączy ich pamięć —
+            niezależnie od modelu.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#polacz"
+              >Połącz swojego agenta <span aria-hidden="true">↗</span></a
+            ><a class="text-link" href="#jak-dziala"
+              >Poznaj przepływ <span aria-hidden="true">↓</span></a
+            >
+          </div>
+          <div class="hero-facts">
+            <span><i></i> Jedna trwała pamięć</span><span><i></i> Odczyt ze źródłem</span
+            ><span><i></i> Bez zmiany modelu</span>
+          </div>
+        </div>
+        <div class="brain-scene" aria-hidden="true">
+          <canvas id="brain"></canvas>
+          <div class="scene-caption">
+            <span>NEUROSA / MEMORY CORE</span
+            ><span class="scene-live"><i></i> WIZUALIZACJA POŁĄCZEŃ</span>
+          </div>
+          <div class="orbit-label jeverson"><i></i> JEVERSON <span>zapis</span></div>
+          <div class="orbit-label hermes"><i></i> HERMES <span>odczyt</span></div>
+          <div class="scene-coordinate">01 — CONTEXT PERSISTS</div>
+        </div>
+      </section>
+      <section class="principles" id="jak-dziala" aria-label="Jak działa NeurOSA">
+        <article>
+          <span class="number">01</span>
+          <div>
+            <h2>Podłącz</h2>
+            <p>Wybierz agenta i otrzymaj gotową konfigurację połączenia.</p>
+          </div>
+        </article>
+        <article>
+          <span class="number">02</span>
+          <div>
+            <h2>Zapamiętaj</h2>
+            <p>Agent zapisuje wybrane fakty w jednej, wspólnej NeurOSA.</p>
+          </div>
+        </article>
+        <article>
+          <span class="number">03</span>
+          <div>
+            <h2>Wróć do kontekstu</h2>
+            <p>Nowa sesja odczytuje pamięć razem z dokumentem źródłowym.</p>
+          </div>
+        </article>
+      </section>
+      <section class="connect-section" id="polacz" aria-labelledby="connect-title">
+        <div class="section-intro">
+          <p class="eyebrow">JEDEN CONNECTOR. TWOJE NARZĘDZIA.</p>
+          <h2 id="connect-title">Pamięć gotowa<br />na kolejnego agenta.</h2>
+          <p>Przygotuj połączenie tutaj.<br />Twój agent wykona resztę w swoim środowisku.</p>
+          <div class="privacy-note">
+            <span aria-hidden="true">⌁</span>
+            <p>
+              Klucz NeurOSA pozostaje na serwerze.<br />Przeglądarka otrzymuje tylko jednorazowy kod
+              parowania.
+            </p>
+          </div>
+        </div>
+        <div class="connection-card">
+          <div class="card-heading">
+            <span class="small-label">TWOJE POŁĄCZENIE</span
+            ><span id="connection-status" class="status-chip pending"><i></i>Sprawdzanie</span>
+          </div>
+          <div id="access-message" class="notice" hidden>
+            Otwórz prywatny link operatora, aby podłączyć agenta i wykonać test.
+          </div>
+          <div class="tabs" role="tablist" aria-label="Sposób podłączenia">
+            <button
+              id="tab-mcp"
+              role="tab"
+              aria-selected="true"
+              aria-controls="configuration"
+              data-format="mcp"
+            >
+              MCP <span>polecane</span></button
+            ><button
+              id="tab-js"
+              role="tab"
+              aria-selected="false"
+              aria-controls="configuration"
+              data-format="js"
+            >
+              JavaScript</button
+            ><button
+              id="tab-python"
+              role="tab"
+              aria-selected="false"
+              aria-controls="configuration"
+              data-format="python"
+            >
+              Python
+            </button>
+          </div>
+          <form id="pair-form">
+            <label for="agent-name">Nazwa Twojego agenta</label
+            ><input
+              id="agent-name"
+              name="agentId"
+              placeholder="np. Jeverson"
+              value="Jeverson"
+              required
+              maxlength="100"
+              autocomplete="off"
+            /><label class="check"
+              ><input id="read-only" type="checkbox" /> Tylko odczyt pamięci</label
+            ><button class="button primary wide" id="pair-button" type="submit" disabled>
+              Przygotuj połączenie <span aria-hidden="true">↗</span>
+            </button>
+          </form>
+          <p class="card-hint" id="format-hint">
+            Gotowa konfiguracja dla aplikacji obsługujących serwery MCP.
+          </p>
+          <div id="configuration" role="tabpanel" aria-labelledby="tab-mcp" hidden>
+            <div class="config-title">
+              <strong>Konfiguracja gotowa</strong><span id="pair-expiry">Kod ważny 5 minut</span>
+            </div>
+            <p id="config-help">
+              Skopiuj konfigurację do ustawień MCP swojego agenta. Połączenie zostanie potwierdzone
+              dopiero, gdy agent odezwie się do NeurOSA.
+            </p>
+            <pre id="config-code" tabindex="0" aria-label="Konfiguracja agenta"></pre>
+            <div class="config-actions">
+              <button id="copy-config" class="button secondary" type="button">
+                Kopiuj konfigurację</button
+              ><button id="download-config" class="text-link" type="button">Pobierz plik ↓</button>
+            </div>
+            <p id="agent-presence" class="presence"><i></i> Oczekiwanie na agenta</p>
+          </div>
+          <div class="test-row">
+            <div>
+              <strong>Sprawdź pamięć w praktyce</strong>
+              <p>Jeverson zapisze fakt. Nowy klient Hermes go odczyta.</p>
+            </div>
+            <button id="test-button" class="button secondary" type="button" disabled>
+              Test pamięci <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+          <div id="test-proof" class="proof" hidden></div>
+          <div id="feedback" role="status" aria-live="polite"></div>
+          <div class="connection-footer">
+            <span id="brain-label">NEUROSA MEMORY CONNECTOR</span><span>v0.1.1</span>
+          </div>
+        </div>
+      </section>
+      <section class="closing">
+        <p>Model możesz zmienić.<br /><span>Pamięć zostaje z Tobą.</span></p>
+        <a href="#polacz" aria-label="Wróć do podłączenia agenta">↗</a>
+      </section>
+    </main>
+    <footer class="footer">
+      <span>NeurOSA <span class="muted">by OsaTechGPT</span></span
+      ><span>Jedna NeurOSA. Dowolny agent.</span
+      ><a
+        href="https://github.com/HazEOskA/neurosa-human-brain"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Kod źródłowy ↗</a
+      >
+    </footer>
+  </body>
+</html>

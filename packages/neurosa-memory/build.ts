@@ -1,6 +1,6 @@
 import { build } from "esbuild";
 import { execFileSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -19,6 +19,18 @@ await build({
   legalComments: "eof",
 });
 const typesDirectory = await mkdtemp(join(tmpdir(), "neurosa-memory-types-"));
+await build({
+  entryPoints: [join(directory, "src/cli.ts")],
+  outfile: join(directory, "dist/cli.js"),
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node20",
+  tsconfig: join(directory, "../../tsconfig.json"),
+  minify: true,
+  banner: { js: "#!/usr/bin/env node" },
+});
+await chmod(join(directory, "dist/cli.js"), 0o755);
 try {
   execFileSync(
     process.execPath,
@@ -31,7 +43,7 @@ try {
     ],
     { cwd: directory, stdio: "inherit" },
   );
-  for (const file of ["index.d.ts", "types.d.ts"])
+  for (const file of ["index.d.ts", "types.d.ts", "pairing.d.ts"])
     await cp(
       join(typesDirectory, "packages/neurosa-memory/src", file),
       join(directory, "dist", file),

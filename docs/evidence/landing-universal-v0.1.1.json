@@ -1,0 +1,77 @@
+{
+  "schema": "neurosa.universal-memory.acceptance.v0.1",
+  "status": "PASS",
+  "recordedAt": "2026-10-18T10:07:52.802Z",
+  "backend": "canonical BrainApiServer + SqliteRuntimeRepository",
+  "backendAndConnectorSourceSha256": "e0df00d0331249910809ae23e8ca14c0e3169d479b97dd9639d6938771354008",
+  "nodeVersion": "v24.19.0",
+  "environment": "isolated local process, temporary SQLite/WAL",
+  "cloudAzure": "NOT_TESTED: endpoint and credential unavailable in this session",
+  "installation": "offline npm install of the packed package into a clean temporary project",
+  "packageSha256": "b280403713fcb77c0e23c6a02c49737750090e15f33e093e687727a157b1c56a",
+  "modelCalls": 0,
+  "tokensInLogs": false,
+  "checks": {
+    "TYPESCRIPT_INSTALL": {
+      "status": "PASS",
+      "noWorkspaceDependencies": true
+    },
+    "T01": {
+      "status": "PASS",
+      "mode": "LIVE_LOCAL_PROCESS",
+      "service": "NEUROSA-HB Brain API",
+      "brainId": "OsaBrain",
+      "operationId": "8c4b4431-e195-4abb-9459-4c1e9044bc20"
+    },
+    "T02": {
+      "status": "PASS",
+      "writer": "jeverson",
+      "documentId": "ae3c8a1b-41f4-4885-82af-ad6696f6e4e9",
+      "operationId": "0d616db8-e20b-4980-a0e2-6ba812d92668"
+    },
+    "T03": {
+      "status": "PASS",
+      "sameDocument": true,
+      "unchangedLedger": true
+    },
+    "T04": {
+      "status": "PASS",
+      "reader": "hermes",
+      "freshNodeProcess": true,
+      "chatHistoryProvided": false,
+      "operationId": "ec135b10-06f9-4181-a055-47f8a075db95"
+    },
+    "T05": {
+      "status": "PASS",
+      "documentId": "ae3c8a1b-41f4-4885-82af-ad6696f6e4e9",
+      "contentHash": "dad52cde6bee183be59f695c15db500725444668f8764816e2ed6424b65272cc",
+      "ledger": "SERVER_VALIDATED",
+      "externalAttestation": false
+    },
+    "HTTP_PYTHON": {
+      "status": "PASS",
+      "sameSourceAsJavaScript": true,
+      "tokenScope": "read-only"
+    },
+    "T06": {
+      "status": "PASS",
+      "wrongToken": 401,
+      "foreignNamespace": 403,
+      "provenanceDoesNotGrantWrite": 403
+    },
+    "T07": {
+      "status": "PASS",
+      "memoryStatus": "UNAVAILABLE",
+      "ordinaryHostCallbackContinues": true,
+      "fakeMemory": false,
+      "modelCalls": 0
+    },
+    "T08": {
+      "status": "PASS",
+      "restart": "SIGTERM then new process, same SQLite/WAL",
+      "sameSourceAndHash": true,
+      "idempotencySurvivesRestart": true,
+      "documents": 1
+    }
+  }
+}

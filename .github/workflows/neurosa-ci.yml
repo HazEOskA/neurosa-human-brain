@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  TURBO_TELEMETRY_DISABLED: "1"
+  DO_NOT_TRACK: "1"
+
 concurrency:
   group: neurosa-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -47,7 +52,8 @@ jobs:
             pnpm smoke
             mkdir -p /tmp/neurosa-packages
             npm pack ./packages/neurosa-memory --ignore-scripts --pack-destination /tmp/neurosa-packages
-            node --import tsx tests/e2e/universal-memory.ts /tmp/neurosa-packages/osatech-neurosa-memory-0.1.0.tgz /tmp/neurosa-evidence/universal-memory.json
+            node --import tsx tests/e2e/universal-memory.ts /tmp/neurosa-packages/osatech-neurosa-memory-0.1.1.tgz /tmp/neurosa-evidence/universal-memory.json
+            node --import tsx tests/e2e/landing.ts /tmp/neurosa-packages/osatech-neurosa-memory-0.1.1.tgz /tmp/neurosa-evidence/landing.json
             git diff --exit-code
           } 2>&1 | tee /tmp/neurosa-evidence/quality.log
       - name: Zachowaj dowody

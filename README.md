@@ -111,3 +111,5 @@ Pełne zamknięte decyzje techniczne znajdują się w [Architecture Lock](docs/N
 ## NeurOSA Memory Connector
 
 Uniwersalny pakiet `@osatech/neurosa-memory`: `remember`, `recall`, `health`, neutralne hooki oraz ten sam Brain API przez HTTP/MCP. [Integracja i instalacja](packages/neurosa-memory/README.md) · [Dowody testów v0.1](docs/NEUROSA_UNIVERSAL_MEMORY_VERIFICATION.md).
+
+Podłączanie agenta z polskiego landingu: wybór MCP / JavaScript / Python, jednorazowe parowanie i test źródła pamięci. [Uruchomienie i rzeczywiste ograniczenia v0.1.1](docs/NEUROSA_CONNECT_LANDING.md).
