@@ -205,6 +205,8 @@ export function ContextualMemoryBridge() {
         brainToken,
         "/api/v1/brain/status",
       );
+      if (result.ledgerValid !== true)
+        throw new Error("Ledger Brain API jest niepoprawny — połączenie zablokowane.");
       if (typeof result.brainId !== "string" || !result.brainId.trim()) {
         throw new Error("Status Brain API nie zawiera brainId — brak dowodu połączenia.");
       }
