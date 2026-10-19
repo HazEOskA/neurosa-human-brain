@@ -30,3 +30,13 @@ Other products are *navigation links*, not cross-product API connections.
 (1) CI/typecheck/build and desktop+mobile browser tests for branch SHA.
 (2) Real NeurOSA Brain API contract, auth, streaming upload and scopes — separate approval.
 (3) Propagate accepted design tokens to OSA Proof only after confirming no duplicate control plane.
+
+
+## C02 — Real Brain API handoff (opt-in)
+- The client verifies the configured origin over GET /api/v1/brain/status with a bearer token (required brain:read).
+- A **separate explicit consent** is required for POST /api/v1/brain/observe (memory:write). It stores the original source as an observation in **existing** NeurOSA Brain; it does not claim semantic compilation or new graph edges.
+- POST /api/v1/brain/recall (memory:read) tests retrieval explicitly, without auto-inserting retrieved data into other apps.
+- HTTPS required except localhost; no token in URL, localStorage or repo, no implicit retries. CORS/remote TLS must be configured by the Brain operator. A local Brain API on 127.0.0.1 is not remotely accessible from arbitrary users.
+- Single-item limit 900000 chars from Brain API, and browser file cap 6MiB; large history requires server-side streaming pipeline (out of scope).
+- No real Brain API endpoints invoked during preview deployment or CI. Integration requires live operator endpoint+scope verification, not a fabricated Connected badge.
+- Follow-up: reuse @neurosa/ingest parseConversationExport for branched chat transcripts via an authenticated server-side ingestion flow; no duplicate semantic compiler.

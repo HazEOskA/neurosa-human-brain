@@ -130,3 +130,10 @@ a.hive-card:hover{border-color:var(--h-yellow)}
 }
 @media(max-width:360px){.hive-ecosystem-grid{grid-template-columns:minmax(0,1fr)}.hive-header-right{margin-left:0}}
 @media(prefers-reduced-motion:reduce){.hive-header *{scroll-behavior:auto;animation:none!important;transition:none!important}}
+
+/* Explicit authenticated Brain API opt-in; no direct upload before user approval. */
+.hive-brain-config {display:grid;gap:.64rem;margin:1.3rem 0 1rem;padding:1rem 0;border-top:1px solid var(--h-line)}
+.hive-brain-config>label:not(.hive-switch){color:#aaa9a5;font-size:.76rem;line-height:1.4;margin-top:.55rem}
+.hive-brain-config>input{min-width:0;width:100%;background:#090a0c;color:var(--h-ink);border:1px solid var(--h-line-strong);border-radius:8px;padding:.72rem .8rem;font-size:.81rem;outline-color:var(--h-yellow)}
+.hive-brain-config>.hive-primary,.hive-brain-config>.hive-quiet{width:100%}
+.hive-brain-consent{align-items:flex-start;margin:.5rem 0}

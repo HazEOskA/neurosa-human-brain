@@ -11,6 +11,40 @@ type PreparedImport = {
 };
 
 const MAX_BYTES = 6 * 1024 * 1024;
+
+type BrainStatusResponse = { brainId?: string; status?: string; ledgerValid?: boolean };
+
+function canonicalBrainOrigin(raw: string): string {
+  const value = new URL(raw.trim());
+  if (value.protocol !== "https:" && !(value.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(value.hostname))) {
+    throw new Error("Brain API wymaga HTTPS; HTTP dozwolone tylko dla localhost.");
+  }
+  if (value.username || value.password || value.hash || value.search || (value.pathname !== "/" && value.pathname !== "")) {
+    throw new Error("Wpisz wyłącznie origin Brain API, bez ścieżki, loginu i parametrów.");
+  }
+  return value.origin;
+}
+
+async function callBrain<T>(origin: string, token: string, path: string, body?: unknown): Promise<T> {
+  const options: RequestInit = {
+    method: body === undefined ? "GET" : "POST",
+    headers: {
+      authorization: "Bearer " + token,
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+    },
+    cache: "no-store",
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  };
+  let response: Response;
+  try {
+    response = await fetch(origin + path, options);
+  } catch {
+    throw new Error("Nie można połączyć się z Brain API. Sprawdź adres HTTPS, CORS oraz dostęp do sieci.");
+  }
+  if (!response.ok) throw new Error("Brain API odrzuciło żądanie (HTTP " + response.status + "). Sprawdź scope i token.");
+  return (await response.json()) as T;
+}
+
 const destinations = [
   { name: "ChatGPT", url: "https://chatgpt.com/" },
   { name: "Claude", url: "https://claude.ai/new" },
@@ -58,6 +92,13 @@ export function ContextualMemoryBridge() {
   const [message, setMessage] = useState("Dane zostają w tej przeglądarce. Połączenie z Brain API nie jest aktywne.");
   const [busy, setBusy] = useState(false);
   const [longCopy, setLongCopy] = useState(false);
+  const [brainBase, setBrainBase] = useState("");
+  const [brainToken, setBrainToken] = useState("");
+  const [brainProject, setBrainProject] = useState("shared");
+  const [brainReady, setBrainReady] = useState<{ origin: string; brainId: string } | null>(null);
+  const [uploadConsent, setUploadConsent] = useState(false);
+  const [recallQuery, setRecallQuery] = useState("");
+  const [brainWriteStatus, setBrainWriteStatus] = useState("NOT SENT");
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function importFile(event: ChangeEvent<HTMLInputElement>) {
@@ -98,6 +139,68 @@ export function ContextualMemoryBridge() {
     if (!navigator.clipboard?.writeText) throw new Error("Schowek niedostępny. Otwórz stronę przez HTTPS lub localhost.");
     await navigator.clipboard.writeText(text);
   }
+
+  async function testBrainConnection(): Promise<void> {
+    if (busy) return;
+    setBusy(true);
+    setBrainReady(null);
+    try {
+      if (!brainToken.trim()) throw new Error("Wpisz token NeurOSA. Nie zapisujemy go w przeglądarce.");
+      const origin = canonicalBrainOrigin(brainBase);
+      const result = await callBrain<BrainStatusResponse>(origin, brainToken, "/api/v1/brain/status");
+      if (typeof result.brainId !== "string" || !result.brainId.trim()) {
+        throw new Error("Status Brain API nie zawiera brainId — brak dowodu połączenia.");
+      }
+      setBrainReady({ origin, brainId: result.brainId });
+      setMessage("Połączenie potwierdzone: " + result.brainId + ". Nie wysłano danych rozmów.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Brain API: błąd połączenia.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function storeInBrain(): Promise<void> {
+    if (!uploadConsent) { setMessage("Zaznacz zgodę na przesłanie przygotowanych danych do NeurOSA Brain."); return; }
+    if (!brainReady || !brainToken) { setMessage("Najpierw potwierdź połączenie z Brain API."); return; }
+    await action(async (data) => {
+      if (data.content.length > 900000) throw new Error("Brain API obsługuje maksymalnie 900 000 znaków jednego dokumentu.");
+      const projectId = brainProject.trim();
+      if (!projectId || projectId.length > 200) throw new Error("Identyfikator projektu musi mieć 1–200 znaków.");
+      const result = await callBrain<{ status?: string; deduplicated?: boolean }>(
+        brainReady.origin, brainToken, "/api/v1/brain/observe", {
+          title: (filename || "OSA HIVE context " + data.source.sha256.slice(0, 12)).slice(0, 500),
+          content: data.content,
+          kind: "observation",
+          projectId,
+          source: { type: "CHAT_EXPORT", id: "osa-hive:" + data.source.sha256, version: data.source.sha256 },
+          idempotencyKey: "osa-hive-" + data.source.sha256,
+        }
+      );
+      if (result.status !== "ZAPAMIĘTANO") throw new Error("Brain API odpowiedziało, ale nie potwierdziło przyjęcia pamięci.");
+      setBrainWriteStatus(result.deduplicated ? "ALREADY STORED" : "ACKNOWLEDGED");
+      setMessage("Brain API potwierdziło " + (result.deduplicated ? "wcześniejszy zapis" : "zapis obserwacji") + ". Nie oznacza to kompilacji grafu.");
+    });
+  }
+
+  async function verifyRecall(): Promise<void> {
+    if (!brainReady || !brainToken) { setMessage("Najpierw połącz się z NeurOSA Brain API."); return; }
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (!recallQuery.trim()) throw new Error("Wpisz zapytanie testowe dla recall.");
+      const result = await callBrain<{ memories?: unknown[] }>(
+        brainReady.origin, brainToken, "/api/v1/brain/recall", {
+          query: recallQuery.trim().slice(0, 500),
+          limit: 5,
+        }
+      );
+      if (!Array.isArray(result.memories)) throw new Error("Brain API nie zwróciło poprawnego pola memories.");
+      setMessage("Recall wykonany przez Brain API. Liczba rekordów: " + result.memories.length + ". Wynik nie ocenia prawdziwości treści.");
+    } catch (e) { setMessage(e instanceof Error ? e.message : "Recall nie powiódł się."); }
+    finally { setBusy(false); }
+  }
+
   const copyLimit = longCopy ? 60000 : 12000;
   return (
     <main className="hive-page">
@@ -135,12 +238,39 @@ export function ContextualMemoryBridge() {
           </div>
           <div className="hive-panel hive-status-panel">
             <div className="hive-section-head"><h2><b>02</b> Status połączenia</h2><small>CLAIM ≠ PROOF</small></div>
-            <div className="hive-status-row"><span>NeurOSA Brain API</span><strong>NOT CONNECTED</strong></div>
+            <div className="hive-status-row"><span>NeurOSA Brain API</span><strong>{brainReady ? "CONNECTED / " + brainReady.brainId : "NOT CONNECTED"}</strong></div>
             <div className="hive-status-row"><span>Źródło</span><strong>{prepared ? "PREPARED" : "NOT PREPARED"}</strong></div>
             <div className="hive-status-row"><span>Semantic compile</span><strong>NOT IMPLEMENTED HERE</strong></div>
-            <div className="hive-status-row"><span>Graph / recall</span><strong>NOT TESTED</strong></div>
+            <div className="hive-status-row"><span>Graph compile</span><strong>NOT IMPLEMENTED HERE</strong></div>
+            <div className="hive-status-row"><span>Brain write</span><strong>{brainWriteStatus}</strong></div>
             <p className="hive-note">Weryfikacja SHA-256 potwierdza integralność przygotowanego wejścia, a nie prawdziwość informacji lub wykonanie przez Brain. Nie utworzono drugiego systemu pamięci.</p>
             {prepared && <code className="hive-sha">{prepared.source.sha256}</code>}
+
+            <div className="hive-brain-config">
+              <p className="hive-note">Prawdziwe Brain API (opcjonalne). Dane i token są przekazywane wyłącznie do wskazanego przez Ciebie serwera. Token pozostaje tylko w pamięci tej karty.</p>
+              <label htmlFor="brain-origin">Adres Brain API — origin (HTTPS lub localhost)</label>
+              <input id="brain-origin" type="url" placeholder="https://brain.twoja-domena.pl" value={brainBase} autoComplete="off" spellCheck={false}
+                onChange={(event) => { setBrainBase(event.target.value); setBrainReady(null); }} />
+              <label htmlFor="brain-token">Token operatora — scopes brain:read, memory:write, memory:read</label>
+              <input id="brain-token" type="password" value={brainToken} autoComplete="off" placeholder="Token tylko w pamięci bieżącej karty"
+                onChange={(event) => { setBrainToken(event.target.value); setBrainReady(null); }} />
+              <label htmlFor="brain-project">Projekt pamięci</label>
+              <input id="brain-project" value={brainProject} onChange={(event) => setBrainProject(event.target.value)} maxLength={200} />
+              <div className="hive-actions">
+                <button className="hive-quiet" disabled={busy || !brainBase || !brainToken} onClick={() => void testBrainConnection()}>Sprawdź Brain API</button>
+              </div>
+              <label className="hive-switch hive-brain-consent">
+                <input type="checkbox" checked={uploadConsent} onChange={(event) => setUploadConsent(event.target.checked)} />
+                Zgadzam się na przesłanie źródła rozmowy do wskazanego Brain API
+              </label>
+              <button className="hive-primary" disabled={busy || !brainReady || !raw.trim() || !uploadConsent}
+                onClick={() => void storeInBrain()}>Zapisz źródło w NeurOSA Brain →</button>
+              <label htmlFor="brain-recall">Pytanie kontrolne (recall)</label>
+              <input id="brain-recall" value={recallQuery} onChange={(event) => setRecallQuery(event.target.value)} maxLength={500}
+                placeholder="Szukaj w istniejącej pamięci..." />
+              <button className="hive-quiet" disabled={busy || !brainReady || !recallQuery.trim()} onClick={() => void verifyRecall()}>Sprawdź recall</button>
+            </div>
+
             <button className="hive-quiet" disabled={!raw.trim() || busy} onClick={() => void action((data) => {
               objectDownload("neurosa-import.json", JSON.stringify(data, null, 2), "application/json");
               setMessage("Zapisano lokalny manifest. Nie wykonano żadnego requestu do API.");
