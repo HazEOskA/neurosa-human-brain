@@ -40,7 +40,8 @@ function fakeDrive() {
     requested.push(url.toString());
     if (url.pathname.endsWith("/files")) return Promise.resolve(Response.json({ files }));
     if (url.searchParams.get("alt") === "media") {
-      if (url.pathname.endsWith("/safe-file")) return Promise.resolve(new Response("Approved knowledge only"));
+      if (url.pathname.endsWith("/safe-file"))
+        return Promise.resolve(new Response("Approved knowledge only"));
       if (url.pathname.endsWith("/financial-file"))
         return Promise.resolve(new Response("Private financial records"));
     }
