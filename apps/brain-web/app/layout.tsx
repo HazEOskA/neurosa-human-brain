@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import "./globals.css";
+import "./osa-hive.css";
 
 export const metadata: Metadata = {
   title: "NEUROSA-HB — Żywy mózg",

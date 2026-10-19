@@ -1,5 +1,7 @@
 "use client";
 
+import { OsaHiveHeader } from "./osa-hive-header";
+
 import {
   EMPTY_VISUAL_STATE,
   applyBrainEvent,
@@ -93,13 +95,13 @@ function neuronColor(neuron: SceneNeuron, visualState: BrainVisualState): string
   if (effect?.inhibited === true) return "#7c72ff";
   if (effect?.fired === true) return "#ffd166";
   if ((effect?.intensity ?? neuron.activationLevel) > 0.15) return "#ffb454";
-  return neuron.enabled ? "#63aeff" : "#485364";
+  return neuron.enabled ? "#f5cf2f" : "#55504a";
 }
 
 function synapseColor(synapse: SceneSynapse, visualState: BrainVisualState): string {
   const active = visualState.synapseEffects[synapse.id];
   if (active !== undefined) return synapse.mode === "INHIBITORY" ? "#9a8cff" : "#ffb454";
-  return synapse.mode === "INHIBITORY" ? "#554f87" : "#315f8f";
+  return synapse.mode === "INHIBITORY" ? "#554f87" : "#6f5720";
 }
 
 function BrainModel({
@@ -371,16 +373,7 @@ export function LivingBrainWorkspace() {
 
   return (
     <main className="workspace">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">NEUROSA-HB / LIVE EVENT PROJECTION</p>
-          <h1>Żywy mózg agentów</h1>
-        </div>
-        <div className={"connection " + connectionStatus}>
-          <span />
-          {connectionStatus}
-        </div>
-      </header>
+      <OsaHiveHeader view="brain" connectionStatus={connectionStatus} />
 
       <section className="connection-panel panel">
         <label>
