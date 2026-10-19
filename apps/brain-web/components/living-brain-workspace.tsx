@@ -419,7 +419,7 @@ export function LivingBrainWorkspace() {
         <div className="stage-heading">
           <div>
             <p className="eyebrow">Model przestrzenny</p>
-            <h2>Neurony, synapsy i rzeczywiste impulsy</h2>
+            <h2>Żywy mózg agentów</h2>
           </div>
           <div className="metrics">
             <span>regiony {status?.regions ?? 0}</span>
