@@ -197,7 +197,7 @@ export class GoogleDriveSource {
   /** Metadata-only traversal. Does not fetch media, invoke Brain or mutate Drive. */
   async inspect(folderId: string, maxFiles = 1000): Promise<DriveManifest> {
     if (
-      !/^[\\w-]+$/u.test(folderId) ||
+      !/^[\w-]+$/u.test(folderId) ||
       !Number.isInteger(maxFiles) ||
       maxFiles < 1 ||
       maxFiles > 10000
@@ -268,7 +268,7 @@ export class GoogleDriveSource {
   ): Promise<DriveSyncResult> {
     if (!approvedFileIds.length || approvedFileIds.length > maxFiles)
       throw new Error("Wybierz konkretny podzbiór plików do importu");
-    if (approvedFileIds.some((id) => !/^[\\w-]+$/u.test(id)))
+    if (approvedFileIds.some((id) => !/^[\w-]+$/u.test(id)))
       throw new Error("Nieprawidłowy identyfikator pliku Drive");
     const approved = new Set(approvedFileIds);
     const result = await this.sync(folderId, ingest, maxFiles, approved);
