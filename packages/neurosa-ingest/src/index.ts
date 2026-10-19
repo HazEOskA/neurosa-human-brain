@@ -116,6 +116,42 @@ export interface DriveSyncResult {
   skipped: { id: string; reason: string }[];
   failed: { id: string; reason: string }[];
 }
+export interface DriveManifestEntry {
+  readonly id: string;
+  readonly name: string;
+  readonly mimeType: string;
+  readonly folderId: string;
+  readonly sizeBytes: number | null;
+  readonly version: string;
+  readonly modifiedTime: string;
+  readonly eligible: boolean;
+  readonly reason: string | null;
+}
+
+export interface DriveManifest {
+  readonly folderId: string;
+  readonly complete: boolean;
+  readonly entries: readonly DriveManifestEntry[];
+}
+
+const DRIVE_IMPORT_MIME = new Set([
+  "text/plain",
+  "text/markdown",
+  "text/html",
+  "text/csv",
+  "application/json",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.google-apps.document",
+  "application/vnd.google-apps.spreadsheet",
+]);
+const driveEligibility = (file: DriveFile): { eligible: boolean; reason: string | null } => {
+  if (!DRIVE_IMPORT_MIME.has(file.mimeType))
+    return { eligible: false, reason: "Nieobsługiwany format. Brak automatycznego importu." };
+  if (file.size !== undefined && Number(file.size) > MAX_SOURCE_BYTES)
+    return { eligible: false, reason: "Plik przekracza limit 10 MiB." };
+  return { eligible: true, reason: null };
+};
 export class GoogleDriveSource {
   constructor(
     private readonly accessToken: () => Promise<string>,
@@ -158,7 +194,96 @@ export class GoogleDriveSource {
     }
     return Buffer.concat(chunks);
   }
-  async sync(folderId: string, ingest: NeurosaIngest, maxFiles = 1000): Promise<DriveSyncResult> {
+  /** Metadata-only traversal. Does not fetch media, invoke Brain or mutate Drive. */
+  async inspect(folderId: string, maxFiles = 1000): Promise<DriveManifest> {
+    if (!/^[\\w-]+$/u.test(folderId) || !Number.isInteger(maxFiles) || maxFiles < 1 || maxFiles > 10000)
+      throw new Error("Nieprawidłowy folder lub limit Drive");
+    const entries: DriveManifestEntry[] = [];
+    const folders = [folderId];
+    const visited = new Set<string>();
+    while (folders.length > 0) {
+      const current = folders.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      let page: string | undefined;
+      const cursors = new Set<string>();
+      do {
+        const params = new URLSearchParams({
+          q: `'${current}' in parents and trashed = false`,
+          pageSize: "100",
+          fields: "nextPageToken,incompleteSearch,files(id,name,mimeType,version,modifiedTime,size)",
+          supportsAllDrives: "true",
+          includeItemsFromAllDrives: "true",
+        });
+        if (page !== undefined) params.set("pageToken", page);
+        const list = z.object({
+          files: z.array(driveFileSchema),
+          nextPageToken: z.string().optional(),
+          incompleteSearch: z.boolean().optional(),
+        }).parse(await (await this.get(`files?${params}`)).json());
+        if (list.incompleteSearch) throw new Error("Niepełna lista Google Drive");
+        for (const file of list.files) {
+          if (file.mimeType === "application/vnd.google-apps.folder") {
+            folders.push(file.id);
+            continue;
+          }
+          const policy = driveEligibility(file);
+          entries.push({
+            id: file.id,
+            name: file.name,
+            mimeType: file.mimeType,
+            folderId: current,
+            sizeBytes: file.size === undefined ? null : Number(file.size),
+            version: file.version,
+            modifiedTime: file.modifiedTime,
+            eligible: policy.eligible,
+            reason: policy.reason,
+          });
+          if (entries.length >= maxFiles)
+            return { folderId, complete: false, entries };
+        }
+        page = list.nextPageToken;
+        if (page !== undefined) {
+          if (cursors.has(page)) throw new Error("Powtarzający się kursor Drive");
+          cursors.add(page);
+        }
+      } while (page !== undefined);
+    }
+    return { folderId, complete: true, entries };
+  }
+
+  /** Safe opt-in: an empty selection must NEVER mean sync all. */
+  async syncSelected(
+    folderId: string,
+    ingest: NeurosaIngest,
+    approvedFileIds: readonly string[],
+    maxFiles = 1000,
+  ): Promise<DriveSyncResult> {
+    if (!approvedFileIds.length || approvedFileIds.length > maxFiles)
+      throw new Error("Wybierz konkretny podzbiór plików do importu");
+    if (approvedFileIds.some((id) => !/^[\\w-]+$/u.test(id)))
+      throw new Error("Nieprawidłowy identyfikator pliku Drive");
+    const approved = new Set(approvedFileIds);
+    const result = await this.sync(folderId, ingest, maxFiles, approved);
+    const accounted = new Set([
+      ...result.imported,
+      ...result.failed.map((x) => x.id),
+    ]);
+    for (const id of approved) {
+      if (!accounted.has(id)) {
+        result.failed.push({ id, reason: "Nie znaleziono pliku w dozwolonym folderze" });
+        result.complete = false;
+      }
+    }
+    return result;
+  }
+
+  async sync(
+    folderId: string,
+    ingest: NeurosaIngest,
+    maxFiles = 1000,
+    approvedFileIds?: ReadonlySet<string>,
+  ): Promise<DriveSyncResult> {
     if (
       !/^[\w-]+$/u.test(folderId) ||
       !Number.isInteger(maxFiles) ||
@@ -212,6 +337,18 @@ export class GoogleDriveSource {
               reason: "Skrót pominięty; nie wychodzimy poza folder źródłowy",
             });
             continue;
+          }
+          if (approvedFileIds !== undefined && !approvedFileIds.has(file.id)) {
+            result.skipped.push({ id: file.id, reason: "Plik poza zatwierdzoną listą" });
+            continue;
+          }
+          if (approvedFileIds !== undefined) {
+            const policy = driveEligibility(file);
+            if (!policy.eligible) {
+              result.complete = false;
+              result.failed.push({ id: file.id, reason: policy.reason ?? "Plik niedozwolony" });
+              continue;
+            }
           }
           try {
             const data = await this.content(file);
