@@ -10,12 +10,6 @@ export type { ImportedConversation } from "./conversation-export";
 
 export const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 const hash = (data: string | Uint8Array): string => createHash("sha256").update(data).digest("hex");
-const object = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-const string = (value: unknown, fallback = ""): string =>
-  typeof value === "string" ? value : fallback;
 export class NeurosaIngest {
   constructor(
     private readonly client: NeurosaConnect,
