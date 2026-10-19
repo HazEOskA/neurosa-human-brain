@@ -33,25 +33,25 @@ const files = [
 function fakeDrive() {
   const requested: string[] = [];
   const writes: { title: string; content: string; source: unknown }[] = [];
-  const fetcher: typeof fetch = async (input) => {
+  const fetcher: typeof fetch = (input) => {
     const url = new URL(
       typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
     );
     requested.push(url.toString());
-    if (url.pathname.endsWith("/files")) return Response.json({ files });
+    if (url.pathname.endsWith("/files")) return Promise.resolve(Response.json({ files }));
     if (url.searchParams.get("alt") === "media") {
-      if (url.pathname.endsWith("/safe-file")) return new Response("Approved knowledge only");
+      if (url.pathname.endsWith("/safe-file")) return Promise.resolve(new Response("Approved knowledge only"));
       if (url.pathname.endsWith("/financial-file"))
-        return new Response("Private financial records");
+        return Promise.resolve(new Response("Private financial records"));
     }
     const file = files.find((x) => url.pathname.endsWith("/" + x.id));
-    if (file) return Response.json(file);
+    if (file) return Promise.resolve(Response.json(file));
     throw new Error("Unexpected Google Drive request: " + url.pathname);
   };
   const client = {
-    observe: async (input: { title: string; content: string; source: unknown }) => {
+    observe: (input: { title: string; content: string; source: unknown }) => {
       writes.push(input);
-      return { status: "ZAPAMIĘTANO" };
+      return Promise.resolve({ status: "ZAPAMIĘTANO" });
     },
   } as unknown as NeurosaConnect;
   return {
