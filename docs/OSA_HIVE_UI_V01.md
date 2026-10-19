@@ -44,3 +44,9 @@ Other products are _navigation links_, not cross-product API connections.
 - Single-item limit 900000 chars from Brain API, and browser file cap 6MiB; large history requires server-side streaming pipeline (out of scope).
 - No real Brain API endpoints invoked during preview deployment or CI. Integration requires live operator endpoint+scope verification, not a fabricated Connected badge.
 - Follow-up: reuse @neurosa/ingest parseConversationExport for branched chat transcripts via an authenticated server-side ingestion flow; no duplicate semantic compiler.
+
+## C03 — Structured Conversation Import
+- The browser imports 1–20 conversations per explicit batch, retaining source IDs, roles and ChatGPT branch parent references with the canonical `parseConversationExport` parser shared with the server-side importer.
+- Each observation uses content SHA-256, stable source provenance and an idempotency key derived from project, source ID and version.
+- All items are validated before the first request; writes are sequential, stop on the first failure and report PARTIAL status. Partial writes are NOT rolled back.
+- No automatic graph synthesis; `brain/observe` stores canonical knowledge documents. Large archives (6 GB) require an independently designed, authenticated streaming service.

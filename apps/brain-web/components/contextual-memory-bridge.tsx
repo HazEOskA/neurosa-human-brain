@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 import { OsaHiveHeader } from "./osa-hive-header";
+import { parseConversationExport } from "../../../packages/neurosa-ingest/src/conversation-export";
 
 type PreparedImport = {
   schema: "osa.neurosa-import.v1";
@@ -126,6 +127,7 @@ export function ContextualMemoryBridge() {
   const [brainBase, setBrainBase] = useState("");
   const [brainToken, setBrainToken] = useState("");
   const [brainProject, setBrainProject] = useState("shared");
+  const [sourceProvider, setSourceProvider] = useState("raw");
   const [brainReady, setBrainReady] = useState<{ origin: string; brainId: string } | null>(null);
   const [uploadConsent, setUploadConsent] = useState(false);
   const [recallQuery, setRecallQuery] = useState("");
@@ -229,35 +231,75 @@ export function ContextualMemoryBridge() {
       return;
     }
     await action(async (data) => {
-      if (data.content.length > 900000)
-        throw new Error("Brain API obsługuje maksymalnie 900 000 znaków jednego dokumentu.");
       const projectId = brainProject.trim();
       if (!projectId || projectId.length > 200)
         throw new Error("Identyfikator projektu musi mieć 1–200 znaków.");
-      const result = await callBrain<{ status?: string; deduplicated?: boolean }>(
-        brainReady.origin,
-        brainToken,
-        "/api/v1/brain/observe",
-        {
-          title: (filename || "OSA HIVE context " + data.source.sha256.slice(0, 12)).slice(0, 500),
-          content: data.content,
-          kind: "observation",
-          projectId,
-          source: {
-            type: "CHAT_EXPORT",
-            id: "osa-hive:" + data.source.sha256,
-            version: data.source.sha256,
-          },
-          idempotencyKey: "osa-hive-" + data.source.sha256,
-        },
-      );
-      if (result.status !== "ZAPAMIĘTANO")
-        throw new Error("Brain API odpowiedziało, ale nie potwierdziło przyjęcia pamięci.");
-      setBrainWriteStatus(result.deduplicated ? "ALREADY STORED" : "ACKNOWLEDGED");
+
+      // Existing canonical, browser-safe parser is shared with NeurosaIngest.
+      // A source transcript is persisted as knowledge documents, not fake graph neurons.
+      if (sourceProvider !== "raw" && data.source.format !== "json")
+        throw new Error("Wybrany dostawca wymaga poprawnego eksportu JSON.");
+
+      const parsed =
+        sourceProvider === "raw"
+          ? [{ id: data.source.sha256, title: filename || "OSA HIVE context", content: data.content }]
+          : parseConversationExport(JSON.parse(data.content) as unknown, sourceProvider);
+
+      if (parsed.length < 1 || parsed.length > 20)
+        throw new Error("Przeglądarka obsługuje jednorazowo 1–20 rozmów. Duże archiwa wymagają importera strumieniowego.");
+
+      const seen = new Set<string>();
+      const documents: { title: string; content: string; sourceId: string; version: string; idempotencyKey: string }[] = [];
+      for (const item of parsed) {
+        const sourceId = sourceProvider === "raw" ? "osa-hive:" + item.id : sourceProvider + ":" + item.id;
+        if (sourceId.length > 2000 || seen.has(sourceId))
+          throw new Error("Eksport ma zduplikowane lub zbyt długie identyfikatory rozmów.");
+        seen.add(sourceId);
+        if (!item.content.trim() || item.content.length > 900000)
+          throw new Error("Wykryto pustą lub zbyt długą rozmowę; żaden dokument nie został wysłany.");
+        const bytes = new TextEncoder().encode(item.content);
+        const result = await crypto.subtle.digest("SHA-256", bytes);
+        const version = Array.from(new Uint8Array(result))
+          .map((n) => n.toString(16).padStart(2, "0"))
+          .join("");
+        // The key binds source identity AND contents to avoid cross-conversation collisions.
+        const idBytes = new TextEncoder().encode(JSON.stringify([projectId, sourceId, version]));
+        const idHash = await crypto.subtle.digest("SHA-256", idBytes);
+        const idempotencyKey = "osa-hive:" + Array.from(new Uint8Array(idHash))
+          .map((n) => n.toString(16).padStart(2, "0"))
+          .join("");
+        documents.push({ title: item.title.slice(0, 500), content: item.content, sourceId, version, idempotencyKey });
+      }
+
+      let accepted = 0;
+      for (const item of documents) {
+        try {
+          const answer = await callBrain<{ status?: string; deduplicated?: boolean }>(
+            brainReady.origin,
+            brainToken,
+            "/api/v1/brain/observe",
+            {
+              title: item.title,
+              content: item.content,
+              kind: "observation",
+              projectId,
+              source: { type: "CHAT_EXPORT", id: item.sourceId, version: item.version },
+              idempotencyKey: item.idempotencyKey,
+            },
+          );
+          if (answer.status !== "ZAPAMIĘTANO")
+            throw new Error("Brain API nie potwierdziło przyjęcia rekordu.");
+          accepted += 1;
+          setBrainWriteStatus("STORED " + accepted + "/" + documents.length);
+        } catch (error) {
+          setBrainWriteStatus("PARTIAL " + accepted + "/" + documents.length);
+          const detail = error instanceof Error ? error.message : "Nieznany błąd";
+          throw new Error("Import przerwany po " + accepted + "/" + documents.length + " rozmowach: " + detail);
+        }
+      }
+      setBrainWriteStatus("ACKNOWLEDGED " + accepted + "/" + documents.length);
       setMessage(
-        "Brain API potwierdziło " +
-          (result.deduplicated ? "wcześniejszy zapis" : "zapis obserwacji") +
-          ". Nie oznacza to kompilacji grafu.",
+        "Brain API potwierdziło " + accepted + " dokumentów rozmów. Nie oznacza to kompilacji grafu neuronowego.",
       );
     });
   }
@@ -490,6 +532,20 @@ export function ContextualMemoryBridge() {
                   setBrainReady(null);
                 }}
               />
+              <label htmlFor="hive-provider">Format źródła</label>
+              <select
+                id="hive-provider"
+                value={sourceProvider}
+                onChange={(event) => setSourceProvider(event.target.value)}
+                aria-label="Format importowanych rozmów"
+              >
+                <option value="raw">Surowy tekst / jeden dokument</option>
+                <option value="chatgpt">ChatGPT JSON — osobne rozmowy</option>
+                <option value="claude">Claude JSON — osobne rozmowy</option>
+                <option value="gemini">Gemini JSON — osobne rozmowy</option>
+                <option value="grok">Grok JSON — osobne rozmowy</option>
+              </select>
+              <p className="hive-note">Import ustrukturyzowany zachowuje gałęzie ChatGPT oraz role wiadomości. Limit: 20 rozmów na operację. Zapis tworzy dokumenty, nie nowe neurony.</p>
               <label htmlFor="brain-project">Projekt pamięci</label>
               <input
                 id="brain-project"
