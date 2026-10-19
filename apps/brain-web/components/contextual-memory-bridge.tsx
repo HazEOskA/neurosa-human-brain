@@ -92,7 +92,7 @@ async function prepareImport(raw: string, filename: string): Promise<PreparedImp
     throw new Error("Limit importu: 6 MiB. Duże archiwa wymagają backendu strumieniowego.");
   if (!globalThis.crypto?.subtle) throw new Error("SHA-256 wymaga HTTPS lub localhost.");
   const format =
-    filename.toLowerCase().endsWith(".json") || (!filename && /^[\[{]/u.test(raw.trim()))
+    filename.toLowerCase().endsWith(".json") || (!filename && /^[{[]/u.test(raw.trim()))
       ? "json"
       : "markdown_or_text";
   if (format === "json") {
