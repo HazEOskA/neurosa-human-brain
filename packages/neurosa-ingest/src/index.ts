@@ -196,7 +196,12 @@ export class GoogleDriveSource {
   }
   /** Metadata-only traversal. Does not fetch media, invoke Brain or mutate Drive. */
   async inspect(folderId: string, maxFiles = 1000): Promise<DriveManifest> {
-    if (!/^[\\w-]+$/u.test(folderId) || !Number.isInteger(maxFiles) || maxFiles < 1 || maxFiles > 10000)
+    if (
+      !/^[\\w-]+$/u.test(folderId) ||
+      !Number.isInteger(maxFiles) ||
+      maxFiles < 1 ||
+      maxFiles > 10000
+    )
       throw new Error("Nieprawidłowy folder lub limit Drive");
     const entries: DriveManifestEntry[] = [];
     const folders = [folderId];
@@ -211,16 +216,19 @@ export class GoogleDriveSource {
         const params = new URLSearchParams({
           q: `'${current}' in parents and trashed = false`,
           pageSize: "100",
-          fields: "nextPageToken,incompleteSearch,files(id,name,mimeType,version,modifiedTime,size)",
+          fields:
+            "nextPageToken,incompleteSearch,files(id,name,mimeType,version,modifiedTime,size)",
           supportsAllDrives: "true",
           includeItemsFromAllDrives: "true",
         });
         if (page !== undefined) params.set("pageToken", page);
-        const list = z.object({
-          files: z.array(driveFileSchema),
-          nextPageToken: z.string().optional(),
-          incompleteSearch: z.boolean().optional(),
-        }).parse(await (await this.get(`files?${params}`)).json());
+        const list = z
+          .object({
+            files: z.array(driveFileSchema),
+            nextPageToken: z.string().optional(),
+            incompleteSearch: z.boolean().optional(),
+          })
+          .parse(await (await this.get(`files?${params}`)).json());
         if (list.incompleteSearch) throw new Error("Niepełna lista Google Drive");
         for (const file of list.files) {
           if (file.mimeType === "application/vnd.google-apps.folder") {
@@ -239,8 +247,7 @@ export class GoogleDriveSource {
             eligible: policy.eligible,
             reason: policy.reason,
           });
-          if (entries.length >= maxFiles)
-            return { folderId, complete: false, entries };
+          if (entries.length >= maxFiles) return { folderId, complete: false, entries };
         }
         page = list.nextPageToken;
         if (page !== undefined) {
@@ -265,10 +272,7 @@ export class GoogleDriveSource {
       throw new Error("Nieprawidłowy identyfikator pliku Drive");
     const approved = new Set(approvedFileIds);
     const result = await this.sync(folderId, ingest, maxFiles, approved);
-    const accounted = new Set([
-      ...result.imported,
-      ...result.failed.map((x) => x.id),
-    ]);
+    const accounted = new Set([...result.imported, ...result.failed.map((x) => x.id)]);
     for (const id of approved) {
       if (!accounted.has(id)) {
         result.failed.push({ id, reason: "Nie znaleziono pliku w dozwolonym folderze" });

@@ -4,32 +4,62 @@ import type { NeurosaConnect } from "@neurosa/connect";
 const folder = "drive-test-folder";
 const modifiedTime = "2026-10-19T00:00:00.000Z";
 const files = [
-  { id: "safe-file", name: "memory.md", mimeType: "text/plain", version: "1", modifiedTime, size: "21" },
-  { id: "financial-file", name: "financial.txt", mimeType: "text/plain", version: "1", modifiedTime, size: "25" },
-  { id: "oversized-file", name: "archive.zip", mimeType: "application/zip", version: "1", modifiedTime, size: String(6 * 1024 * 1024 * 1024) },
+  {
+    id: "safe-file",
+    name: "memory.md",
+    mimeType: "text/plain",
+    version: "1",
+    modifiedTime,
+    size: "21",
+  },
+  {
+    id: "financial-file",
+    name: "financial.txt",
+    mimeType: "text/plain",
+    version: "1",
+    modifiedTime,
+    size: "25",
+  },
+  {
+    id: "oversized-file",
+    name: "archive.zip",
+    mimeType: "application/zip",
+    version: "1",
+    modifiedTime,
+    size: String(6 * 1024 * 1024 * 1024),
+  },
 ];
 
 function fakeDrive() {
   const requested: string[] = [];
   const writes: { title: string; content: string; source: unknown }[] = [];
   const fetcher: typeof fetch = async (input) => {
-    const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+    const url = new URL(
+      typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+    );
     requested.push(url.toString());
-    if (url.pathname.endsWith("/files"))
-      return Response.json({ files });
+    if (url.pathname.endsWith("/files")) return Response.json({ files });
     if (url.searchParams.get("alt") === "media") {
       if (url.pathname.endsWith("/safe-file")) return new Response("Approved knowledge only");
-      if (url.pathname.endsWith("/financial-file")) return new Response("Private financial records");
+      if (url.pathname.endsWith("/financial-file"))
+        return new Response("Private financial records");
     }
     const file = files.find((x) => url.pathname.endsWith("/" + x.id));
     if (file) return Response.json(file);
     throw new Error("Unexpected Google Drive request: " + url.pathname);
   };
-  const client = { observe: async (input: { title: string; content: string; source: unknown }) => {
-    writes.push(input);
-    return { status: "ZAPAMIĘTANO" };
-  } } as unknown as NeurosaConnect;
-  return { drive: new GoogleDriveSource(() => Promise.resolve("read-only-test-token"), fetcher), ingest: new NeurosaIngest(client), requested, writes };
+  const client = {
+    observe: async (input: { title: string; content: string; source: unknown }) => {
+      writes.push(input);
+      return { status: "ZAPAMIĘTANO" };
+    },
+  } as unknown as NeurosaConnect;
+  return {
+    drive: new GoogleDriveSource(() => Promise.resolve("read-only-test-token"), fetcher),
+    ingest: new NeurosaIngest(client),
+    requested,
+    writes,
+  };
 }
 
 describe("Drive → NeurOSA filtered manifest and selected import", () => {
@@ -39,7 +69,9 @@ describe("Drive → NeurOSA filtered manifest and selected import", () => {
     expect(manifest.complete).toBe(true);
     expect(manifest.entries).toHaveLength(3);
     expect(manifest.entries.find((e) => e.id === "oversized-file")?.eligible).toBe(false);
-    expect(source.requested.every((url) => !url.includes("alt=media") && !url.includes("/export"))).toBe(true);
+    expect(
+      source.requested.every((url) => !url.includes("alt=media") && !url.includes("/export")),
+    ).toBe(true);
     expect(source.writes).toHaveLength(0);
   });
 
