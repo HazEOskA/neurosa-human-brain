@@ -242,21 +242,38 @@ export function ContextualMemoryBridge() {
 
       const parsed =
         sourceProvider === "raw"
-          ? [{ id: data.source.sha256, title: filename || "OSA HIVE context", content: data.content }]
+          ? [
+              {
+                id: data.source.sha256,
+                title: filename || "OSA HIVE context",
+                content: data.content,
+              },
+            ]
           : parseConversationExport(JSON.parse(data.content) as unknown, sourceProvider);
 
       if (parsed.length < 1 || parsed.length > 20)
-        throw new Error("Przeglądarka obsługuje jednorazowo 1–20 rozmów. Duże archiwa wymagają importera strumieniowego.");
+        throw new Error(
+          "Przeglądarka obsługuje jednorazowo 1–20 rozmów. Duże archiwa wymagają importera strumieniowego.",
+        );
 
       const seen = new Set<string>();
-      const documents: { title: string; content: string; sourceId: string; version: string; idempotencyKey: string }[] = [];
+      const documents: {
+        title: string;
+        content: string;
+        sourceId: string;
+        version: string;
+        idempotencyKey: string;
+      }[] = [];
       for (const item of parsed) {
-        const sourceId = sourceProvider === "raw" ? "osa-hive:" + item.id : sourceProvider + ":" + item.id;
+        const sourceId =
+          sourceProvider === "raw" ? "osa-hive:" + item.id : sourceProvider + ":" + item.id;
         if (sourceId.length > 2000 || seen.has(sourceId))
           throw new Error("Eksport ma zduplikowane lub zbyt długie identyfikatory rozmów.");
         seen.add(sourceId);
         if (!item.content.trim() || item.content.length > 900000)
-          throw new Error("Wykryto pustą lub zbyt długą rozmowę; żaden dokument nie został wysłany.");
+          throw new Error(
+            "Wykryto pustą lub zbyt długą rozmowę; żaden dokument nie został wysłany.",
+          );
         const bytes = new TextEncoder().encode(item.content);
         const result = await crypto.subtle.digest("SHA-256", bytes);
         const version = Array.from(new Uint8Array(result))
@@ -265,10 +282,18 @@ export function ContextualMemoryBridge() {
         // The key binds source identity AND contents to avoid cross-conversation collisions.
         const idBytes = new TextEncoder().encode(JSON.stringify([projectId, sourceId, version]));
         const idHash = await crypto.subtle.digest("SHA-256", idBytes);
-        const idempotencyKey = "osa-hive:" + Array.from(new Uint8Array(idHash))
-          .map((n) => n.toString(16).padStart(2, "0"))
-          .join("");
-        documents.push({ title: item.title.slice(0, 500), content: item.content, sourceId, version, idempotencyKey });
+        const idempotencyKey =
+          "osa-hive:" +
+          Array.from(new Uint8Array(idHash))
+            .map((n) => n.toString(16).padStart(2, "0"))
+            .join("");
+        documents.push({
+          title: item.title.slice(0, 500),
+          content: item.content,
+          sourceId,
+          version,
+          idempotencyKey,
+        });
       }
 
       let accepted = 0;
@@ -294,12 +319,16 @@ export function ContextualMemoryBridge() {
         } catch (error) {
           setBrainWriteStatus("PARTIAL " + accepted + "/" + documents.length);
           const detail = error instanceof Error ? error.message : "Nieznany błąd";
-          throw new Error("Import przerwany po " + accepted + "/" + documents.length + " rozmowach: " + detail);
+          throw new Error(
+            "Import przerwany po " + accepted + "/" + documents.length + " rozmowach: " + detail,
+          );
         }
       }
       setBrainWriteStatus("ACKNOWLEDGED " + accepted + "/" + documents.length);
       setMessage(
-        "Brain API potwierdziło " + accepted + " dokumentów rozmów. Nie oznacza to kompilacji grafu neuronowego.",
+        "Brain API potwierdziło " +
+          accepted +
+          " dokumentów rozmów. Nie oznacza to kompilacji grafu neuronowego.",
       );
     });
   }
@@ -545,7 +574,10 @@ export function ContextualMemoryBridge() {
                 <option value="gemini">Gemini JSON — osobne rozmowy</option>
                 <option value="grok">Grok JSON — osobne rozmowy</option>
               </select>
-              <p className="hive-note">Import ustrukturyzowany zachowuje gałęzie ChatGPT oraz role wiadomości. Limit: 20 rozmów na operację. Zapis tworzy dokumenty, nie nowe neurony.</p>
+              <p className="hive-note">
+                Import ustrukturyzowany zachowuje gałęzie ChatGPT oraz role wiadomości. Limit: 20
+                rozmów na operację. Zapis tworzy dokumenty, nie nowe neurony.
+              </p>
               <label htmlFor="brain-project">Projekt pamięci</label>
               <input
                 id="brain-project"

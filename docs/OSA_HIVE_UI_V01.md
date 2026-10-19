@@ -46,6 +46,7 @@ Other products are _navigation links_, not cross-product API connections.
 - Follow-up: reuse @neurosa/ingest parseConversationExport for branched chat transcripts via an authenticated server-side ingestion flow; no duplicate semantic compiler.
 
 ## C03 — Structured Conversation Import
+
 - The browser imports 1–20 conversations per explicit batch, retaining source IDs, roles and ChatGPT branch parent references with the canonical `parseConversationExport` parser shared with the server-side importer.
 - Each observation uses content SHA-256, stable source provenance and an idempotency key derived from project, source ID and version.
 - All items are validated before the first request; writes are sequential, stop on the first failure and report PARTIAL status. Partial writes are NOT rolled back.

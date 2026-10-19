@@ -571,4 +571,13 @@ a.hive-card:hover {
   margin: 0.5rem 0;
 }
 
-.hive-brain-config > select { min-width: 0; width: 100%; background: #090a0c; color: var(--h-ink); border: 1px solid var(--h-line-strong); border-radius: 8px; padding: .72rem .8rem; font-size: .81rem; }
+.hive-brain-config > select {
+  min-width: 0;
+  width: 100%;
+  background: #090a0c;
+  color: var(--h-ink);
+  border: 1px solid var(--h-line-strong);
+  border-radius: 8px;
+  padding: 0.72rem 0.8rem;
+  font-size: 0.81rem;
+}
