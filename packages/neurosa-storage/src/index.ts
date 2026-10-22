@@ -522,13 +522,9 @@ export class SqliteRuntimeRepository
       this.database
         .prepare(
           `INSERT INTO activations(activation_id, brain_id, result_json, created_at)
-           VALUES (?, ?, ?, ?)
-           ON CONFLICT(activation_id) DO UPDATE SET result_json = excluded.result_json`,
+           VALUES (?, ?, ?, ?)`,
         )
         .run(result.activationId, brainId, JSON.stringify(result), new Date().toISOString());
-      this.database
-        .prepare("DELETE FROM impulses WHERE activation_id = ?")
-        .run(result.activationId);
       const insert = this.database.prepare(
         "INSERT INTO impulses(id, activation_id, impulse_json) VALUES (?, ?, ?)",
       );

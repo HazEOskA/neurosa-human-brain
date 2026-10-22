@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -9,11 +9,30 @@ import {
   type BrainDocument,
   type BrainWorkspaceRepository,
 } from "@neurosa/document-domain";
-import type { NeurosaRuntime } from "@neurosa/neural-runtime";
+import {
+  ActivationIdConflict,
+  ReplayIntegrityError,
+  type NeurosaRuntime,
+} from "@neurosa/neural-runtime";
 import type { RuntimeRepository, ActivationRequest, BrainEvent } from "@neurosa/runtime-domain";
 import { NativeBrainWorkspace } from "@neurosa/workspace";
 import { SharedKnowledge } from "@neurosa/workspace/knowledge";
 import { z } from "zod";
+
+const sourceRevisionSchema = z
+  .object({
+    documentId: z.string().trim().min(1).max(200),
+    revision: z.number().int().min(1),
+  })
+  .strict();
+
+function parseSourceRevision(value: unknown) {
+  if (value === undefined) return undefined;
+  const parsed = sourceRevisionSchema.safeParse(value);
+  if (!parsed.success)
+    throw new ApiProblem(400, "NIEPRAWIDŁOWE_DANE", "Nieprawidłowa rewizja źródła");
+  return parsed.data;
+}
 
 const memorySchema = z
   .object({
@@ -123,6 +142,7 @@ interface ActivationInput {
   readonly limitZdarzen?: unknown;
   readonly limitCzasuMs?: unknown;
   readonly trybDeterministyczny?: unknown;
+  readonly sourceRevision?: unknown;
 }
 
 class ApiProblem extends Error {
@@ -364,9 +384,13 @@ export class BrainApiServer {
               "KONFLIKT",
               `${error.message}; aktualna rewizja: ${String(error.currentRevision ?? "UNKNOWN")}`,
             )
-          : error instanceof ApiProblem
-            ? error
-            : new ApiProblem(500, "BŁĄD_WEWNĘTRZNY", "Wewnętrzny błąd Brain API");
+          : error instanceof ActivationIdConflict
+            ? new ApiProblem(409, "KONFLIKT_AKTYWACJI", error.message)
+            : error instanceof ReplayIntegrityError
+              ? new ApiProblem(409, "NIEZGODNY_REPLAY", error.message)
+              : error instanceof ApiProblem
+                ? error
+                : new ApiProblem(500, "BŁĄD_WEWNĘTRZNY", "Wewnętrzny błąd Brain API");
       const payload: JsonError = { code: problem.code, message: problem.message, correlationId };
       json(response, problem.status, payload, correlationId);
     }
@@ -504,8 +528,60 @@ export class BrainApiServer {
         limitCzasuMs: asNumber(body.limitCzasuMs, "limitCzasuMs", 5_000, 10, 60_000, true),
         trybDeterministyczny: asBoolean(body.trybDeterministyczny, "trybDeterministyczny") ?? true,
       };
-      const result = this.runtime.activate(activation);
+      const requestedRevision = parseSourceRevision(body.sourceRevision);
+      if (requestedRevision !== undefined) this.requireScope(auth, "memory:read");
+      const snapshot =
+        requestedRevision === undefined
+          ? undefined
+          : this.sourceSnapshot(requestedRevision.documentId, requestedRevision.revision);
+      const result = this.runtime.activate(
+        activation,
+        snapshot === undefined
+          ? undefined
+          : {
+              documentId: snapshot.documentId,
+              documentRevision: snapshot.revision,
+              documentHash: snapshot.contentHash,
+            },
+      );
       json(response, 200, result, correlationId);
+      return;
+    }
+
+    if (
+      request.method === "GET" &&
+      route.length === 4 &&
+      route[0] === "brain" &&
+      route[1] === "activations" &&
+      route[2] !== undefined &&
+      route[3] === "replay"
+    ) {
+      this.requireScope(auth, "brain:read");
+      this.requireScope(auth, "memory:read");
+      const proof = this.runtime.replayActivation(route[2]);
+      const historical = this.sourceSnapshot(
+        proof.provenance.documentId,
+        proof.provenance.documentRevision,
+      );
+      if (historical.contentHash !== proof.provenance.documentHash)
+        throw new ReplayIntegrityError("Historyczny dokument nie zgadza się ze śladem aktywacji");
+      const current = this.repository.loadDocument(proof.provenance.documentId);
+      const sourceCurrent =
+        current !== null &&
+        current.revision === proof.provenance.documentRevision &&
+        current.contentHash === proof.provenance.documentHash &&
+        current.deletedAt === null &&
+        !current.archived;
+      json(
+        response,
+        200,
+        {
+          ...proof,
+          sourceCurrent,
+          currentRevision: current?.revision ?? null,
+        },
+        correlationId,
+      );
       return;
     }
 
@@ -612,7 +688,11 @@ export class BrainApiServer {
         limit?: unknown;
         maxChars?: unknown;
         includeCore?: unknown;
+        sourceRevision?: unknown;
       };
+      const sourceRevision = parseSourceRevision(body.sourceRevision);
+      if (sourceRevision !== undefined && body.includeCore !== true)
+        throw new ApiProblem(400, "NIEPRAWIDŁOWE_DANE", "Historyczny recall wymaga includeCore");
       const search = asString(body.query, "query") as string;
       const limit = asNumber(body.limit, "limit", 10, 1, 100, true);
       if (body.includeCore === true) {
@@ -625,7 +705,7 @@ export class BrainApiServer {
             query: search,
             brainId: this.runtime.getProgram().brainId,
             ledgerValid: this.runtime.verifyLedger().valid,
-            ...this.knowledge.context(search, maxChars, limit),
+            ...this.knowledge.context(search, maxChars, limit, sourceRevision),
           },
           correlationId,
         );
@@ -731,6 +811,24 @@ export class BrainApiServer {
     }
 
     throw new ApiProblem(404, "NIE_ZNALEZIONO", "Nie znaleziono endpointu Brain API");
+  }
+
+  private sourceSnapshot(documentId: string, revision: number) {
+    const current = this.repository.loadDocument(documentId);
+    const historical = this.repository
+      .listDocumentRevisions(documentId)
+      .find((entry) => entry.revision === revision);
+    if (historical === undefined || current === null)
+      throw new KnowledgeConflict("Nie istnieje żądana rewizja dokumentu", current?.revision);
+    const contentHash = createHash("sha256").update(historical.snapshot.content).digest("hex");
+    if (
+      contentHash !== historical.contentHash ||
+      contentHash !== historical.snapshot.contentHash ||
+      historical.snapshot.revision !== revision ||
+      historical.snapshot.documentId !== documentId
+    )
+      throw new ReplayIntegrityError("Nieprawidłowy hash historycznego źródła");
+    return historical;
   }
 
   private authenticate(request: IncomingMessage): AuthContext {

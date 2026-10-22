@@ -85,6 +85,22 @@ export interface ActivationTraceEntry {
   readonly hop: number;
 }
 
+export interface ActivationProvenance {
+  readonly documentId: string;
+  readonly documentRevision: number;
+  readonly documentHash: string;
+  readonly irHash: string;
+  readonly sourceHash: string;
+  readonly irVersion: string;
+}
+
+export interface ActivationReplayContext {
+  readonly request: ActivationRequest;
+  readonly program: NeuralProgram;
+  readonly neurons: readonly NeuronState[];
+  readonly synapses: readonly SynapseState[];
+}
+
 export interface ActivationResult {
   readonly activationId: string;
   readonly status: ActivationStatus;
@@ -95,6 +111,8 @@ export interface ActivationResult {
   readonly eventCount: number;
   readonly stopReason: ActivationStopReason;
   readonly trace: readonly ActivationTraceEntry[];
+  readonly provenance?: ActivationProvenance;
+  readonly replayContext?: ActivationReplayContext;
 }
 
 export const BRAIN_EVENT_TYPES = [
@@ -164,6 +182,7 @@ export interface StoredBrain {
 }
 
 export interface RuntimeRepository extends EventStore {
+  atomic<T>(operation: () => T): T;
   initialize(): void;
   migrate(): void;
   saveBrain(brain: StoredBrain): void;
