@@ -192,8 +192,9 @@ export class NeurosaRuntime {
 
     const receipts = this.repository
       .listEvents()
-      .filter((event) =>
-        event.eventType === "RUNTIME_STATE_SAVED" && event.activationId === activationId,
+      .filter(
+        (event) =>
+          event.eventType === "RUNTIME_STATE_SAVED" && event.activationId === activationId,
       );
     if (receipts.length !== 1)
       throw new ReplayIntegrityError("Brak unikalnego potwierdzenia aktywacji w ledgerze");
