@@ -1,7 +1,11 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { BrainApiServer } from "@neurosa/brain-api";
 import { compileSource } from "@neurosa/compiler";
 import { NeurosaRuntime } from "@neurosa/neural-runtime";
 import { SqliteRuntimeRepository } from "@neurosa/storage";
+import Database from "better-sqlite3";
 
 const TOKEN = "neurosa-revision-replay-test-token-123456789";
 const SOURCE = [
@@ -16,8 +20,8 @@ const SOURCE = [
 
 type Json = Record<string, unknown>;
 
-async function fixture() {
-  const repository = new SqliteRuntimeRepository(":memory:");
+async function fixture(path = ":memory:") {
+  const repository = new SqliteRuntimeRepository(path);
   const runtime = new NeurosaRuntime(repository);
   runtime.load(compileSource(SOURCE, "replay-audit.nsa").ir);
   const server = new BrainApiServer(runtime, repository, {
@@ -25,7 +29,7 @@ async function fixture() {
       {
         token: TOKEN,
         agentId: "replay-auditor",
-        scopes: ["brain:read", "brain:activate", "memory:read", "memory:write"],
+        scopes: ["brain:read", "brain:activate", "memory:read", "memory:write", "events:read"],
       },
     ],
     rateLimitPerMinute: 10000,
@@ -34,8 +38,11 @@ async function fixture() {
   return { url, repository, runtime, server };
 }
 
-async function withBrain(work: (value: Awaited<ReturnType<typeof fixture>>) => Promise<void>) {
-  const value = await fixture();
+async function withBrain(
+  work: (value: Awaited<ReturnType<typeof fixture>>) => Promise<void>,
+  path?: string,
+) {
+  const value = await fixture(path);
   try {
     await work(value);
   } finally {
@@ -173,6 +180,7 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
         expect.stringMatching(/^[a-f0-9]{64}$/u),
       );
       const eventsBefore = await api(url, "brain/events");
+      expect(eventsBefore.status).toBe(200);
       const proof = await api(url, "brain/activations/" + activationId + "/replay");
       expect(proof.status).toBe(200);
       expect(proof.data.replayMatched).toBe(true);
@@ -184,6 +192,7 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
         expect.stringMatching(/^[a-f0-9]{64}$/u),
       );
       const eventsAfter = await api(url, "brain/events");
+      expect(eventsAfter.status).toBe(200);
       expect(eventsAfter.data).toEqual(eventsBefore.data);
 
       await updateToR2(url, id);
@@ -251,4 +260,47 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
       expect(replay.status).toBe(409);
     });
   });
+  it("INTEGRITY: zmieniony zapis aktywacji nie przechodzi replay mimo poprawnego ledgera", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "neurosa-replay-integrity-"));
+    const databasePath = join(directory, "brain.db");
+    try {
+      await withBrain(async ({ url }) => {
+        const source = await makeDocument(url);
+        const id = source.documentId as string;
+        const activationId = "replay-tampered-receipt";
+        const executed = await api(url, "brain/activate", "POST", {
+          activationId,
+          seedNeuronIds: ["Source"],
+          sourceRevision: { documentId: id, revision: 1 },
+        });
+        expect(executed.status).toBe(200);
+        expect((await api(url, "brain/activations/" + activationId + "/replay")).status).toBe(
+          200,
+        );
+        const tamper = new Database(databasePath);
+        try {
+          const row = tamper
+            .prepare("SELECT result_json FROM activations WHERE activation_id = ?")
+            .get(activationId) as { result_json: string };
+          const altered = JSON.parse(row.result_json) as Json;
+          const provenance = altered.provenance as Json;
+          provenance.documentHash = "0".repeat(64);
+          tamper
+            .prepare("UPDATE activations SET result_json = ? WHERE activation_id = ?")
+            .run(JSON.stringify(altered), activationId);
+        } finally {
+          tamper.close();
+        }
+        const ledger = await api(url, "brain/ledger/verify");
+        expect(ledger.status).toBe(200);
+        expect(ledger.data.valid).toBe(true);
+        const replay = await api(url, "brain/activations/" + activationId + "/replay");
+        expect(replay.status).toBe(409);
+        expect(replay.data.code).toBe("NIEZGODNY_REPLAY");
+      }, databasePath);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
 });
