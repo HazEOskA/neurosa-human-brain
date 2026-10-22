@@ -9,7 +9,11 @@ import {
   type BrainDocument,
   type BrainWorkspaceRepository,
 } from "@neurosa/document-domain";
-import { ActivationIdConflict, ReplayIntegrityError, type NeurosaRuntime } from "@neurosa/neural-runtime";
+import {
+  ActivationIdConflict,
+  ReplayIntegrityError,
+  type NeurosaRuntime,
+} from "@neurosa/neural-runtime";
 import type { RuntimeRepository, ActivationRequest, BrainEvent } from "@neurosa/runtime-domain";
 import { NativeBrainWorkspace } from "@neurosa/workspace";
 import { SharedKnowledge } from "@neurosa/workspace/knowledge";
@@ -386,7 +390,7 @@ export class BrainApiServer {
               ? new ApiProblem(409, "NIEZGODNY_REPLAY", error.message)
               : error instanceof ApiProblem
                 ? error
-            : new ApiProblem(500, "BŁĄD_WEWNĘTRZNY", "Wewnętrzny błąd Brain API");
+                : new ApiProblem(500, "BŁĄD_WEWNĘTRZNY", "Wewnętrzny błąd Brain API");
       const payload: JsonError = { code: problem.code, message: problem.message, correlationId };
       json(response, problem.status, payload, correlationId);
     }
