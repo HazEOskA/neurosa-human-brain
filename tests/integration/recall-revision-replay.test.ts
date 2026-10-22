@@ -260,6 +260,7 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
       expect(replay.status).toBe(409);
     });
   });
+
   it("INTEGRITY: zmieniony zapis aktywacji nie przechodzi replay mimo poprawnego ledgera", async () => {
     const directory = await mkdtemp(join(tmpdir(), "neurosa-replay-integrity-"));
     const databasePath = join(directory, "brain.db");
@@ -301,5 +302,4 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
       await rm(directory, { recursive: true, force: true });
     }
   });
-
 });
