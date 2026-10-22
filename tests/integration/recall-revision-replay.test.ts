@@ -217,6 +217,7 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
       expect(stored.data).toEqual(first.data);
     });
   });
+
   it("FAIL-CLOSED: brakująca rewizja nie może zostać przypięta", async () => {
     await withBrain(async ({ url }) => {
       const original = await makeDocument(url);
@@ -250,5 +251,4 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
       expect(replay.status).toBe(409);
     });
   });
-
 });
