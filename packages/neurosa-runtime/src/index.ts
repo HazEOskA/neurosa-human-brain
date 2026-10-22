@@ -1,11 +1,13 @@
+import { createHash } from "node:crypto";
 import { ActivationEngine, type ActivationEngineOptions } from "@neurosa/activation";
-import { HashChainLedger } from "@neurosa/event-ledger";
+import { canonicalJson, HashChainLedger, InMemoryEventStore } from "@neurosa/event-ledger";
 import { validateNeuralProgram, type NeuralProgram } from "@neurosa/ir";
 import {
   neuronStatesFromIR,
   synapseStatesFromIR,
   type ActivationRequest,
   type ActivationResult,
+  type ActivationProvenance,
   type BrainEvent,
   type LedgerVerificationResult,
   type NeuronState,
@@ -19,6 +21,28 @@ export interface RuntimeLoadResult {
   readonly restored: boolean;
   readonly neuronCount: number;
   readonly synapseCount: number;
+}
+
+export class ActivationIdConflict extends Error {}
+
+export class ReplayIntegrityError extends Error {}
+
+export interface ActivationSourceBinding {
+  readonly documentId: string;
+  readonly documentRevision: number;
+  readonly documentHash: string;
+}
+
+export interface ReplayVerification {
+  readonly activationId: string;
+  readonly replayMatched: boolean;
+  readonly ledgerValid: boolean;
+  readonly receiptEventHash: string;
+  readonly provenance: ActivationProvenance;
+}
+
+function digest(value: unknown): string {
+  return createHash("sha256").update(canonicalJson(value)).digest("hex");
 }
 
 export class NeurosaRuntime {
@@ -76,30 +100,128 @@ export class NeurosaRuntime {
     };
   }
 
-  activate(request: ActivationRequest): ActivationResult {
+  activate(request: ActivationRequest, source?: ActivationSourceBinding): ActivationResult {
     const brain = this.requireBrain();
+    if (this.repository.loadActivation(request.activationId) !== null)
+      throw new ActivationIdConflict("Identyfikator aktywacji jest już używany");
+    if (source !== undefined && (!request.trybDeterministyczny || request.signal !== undefined))
+      throw new ReplayIntegrityError("Odtwarzalny zapis wymaga deterministycznej aktywacji");
+    if (!this.repository.verifyLedger().valid)
+      throw new ReplayIntegrityError("Nieprawidłowy ledger: aktywacja zablokowana");
+
+    const neuronsBefore = structuredClone(brain.neurons);
+    const synapsesBefore = structuredClone(brain.synapses);
     try {
-      const engine = new ActivationEngine(
-        brain.neurons as NeuronState[],
-        brain.synapses as SynapseState[],
-        this.ledger,
-        this.activationOptions,
-      );
-      const result = engine.activate(request);
-      this.repository.saveBrain(brain);
-      this.repository.saveActivation(brain.brainId, result);
-      this.ledger.append("RUNTIME_STATE_SAVED", request.activationId, {
-        brainId: brain.brainId,
-        neuronCount: brain.neurons.length,
-        synapseCount: brain.synapses.length,
+      return this.repository.atomic(() => {
+        if (this.repository.loadActivation(request.activationId) !== null)
+          throw new ActivationIdConflict("Identyfikator aktywacji jest już używany");
+        const engine = new ActivationEngine(
+          brain.neurons as NeuronState[],
+          brain.synapses as SynapseState[],
+          this.ledger,
+          this.activationOptions,
+        );
+        const executed = engine.activate(request);
+        const provenance: ActivationProvenance | undefined =
+          source === undefined
+            ? undefined
+            : {
+                ...source,
+                irHash: digest(brain.ir),
+                sourceHash: brain.ir.sourceHash,
+                irVersion: brain.ir.version,
+              };
+        const result: ActivationResult =
+          provenance === undefined
+            ? executed
+            : {
+                ...executed,
+                provenance,
+                replayContext: {
+                  request: structuredClone(request),
+                  program: structuredClone(brain.ir),
+                  neurons: neuronsBefore,
+                  synapses: synapsesBefore,
+                },
+              };
+        this.repository.saveBrain(brain);
+        this.repository.saveActivation(brain.brainId, result);
+        this.ledger.append("RUNTIME_STATE_SAVED", request.activationId, {
+          brainId: brain.brainId,
+          neuronCount: brain.neurons.length,
+          synapseCount: brain.synapses.length,
+          resultHash: digest(result),
+        });
+        return result;
       });
-      return result;
     } catch (error: unknown) {
-      this.ledger.append("RUNTIME_ERROR", request.activationId, {
-        message: error instanceof Error ? error.message : String(error),
-      });
+      // SQLite rollback does not roll back the in-memory engine state.
+      for (let index = 0; index < brain.neurons.length; index += 1) {
+        Object.assign(brain.neurons[index]!, neuronsBefore[index]);
+      }
+      for (let index = 0; index < brain.synapses.length; index += 1) {
+        Object.assign(brain.synapses[index]!, synapsesBefore[index]);
+      }
+      if (!(error instanceof ActivationIdConflict)) {
+        this.ledger.append("RUNTIME_ERROR", request.activationId, {
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
       throw error;
     }
+  }
+
+  replayActivation(activationId: string): ReplayVerification {
+    const saved = this.repository.loadActivation(activationId);
+    if (saved === null) throw new ReplayIntegrityError("Nie znaleziono aktywacji");
+    if (!this.repository.verifyLedger().valid)
+      throw new ReplayIntegrityError("Integralność ledgera jest naruszona");
+    if (saved.provenance === undefined || saved.replayContext === undefined)
+      throw new ReplayIntegrityError("Historyczna aktywacja nie posiada kompletnego snapshotu");
+
+    const context = saved.replayContext;
+    const provenance = saved.provenance;
+    if (
+      !context.request.trybDeterministyczny ||
+      context.request.activationId !== activationId ||
+      context.program.sourceHash !== provenance.sourceHash ||
+      context.program.version !== provenance.irVersion ||
+      digest(context.program) !== provenance.irHash
+    )
+      throw new ReplayIntegrityError("Niezgodny snapshot wejściowy lub IR");
+
+    const receipts = this.repository
+      .listEvents()
+      .filter((event) =>
+        event.eventType === "RUNTIME_STATE_SAVED" && event.activationId === activationId,
+      );
+    if (receipts.length !== 1)
+      throw new ReplayIntegrityError("Brak unikalnego potwierdzenia aktywacji w ledgerze");
+    const receipt = receipts[0]!;
+    const payload = receipt.payload as { resultHash?: unknown };
+    if (typeof payload.resultHash !== "string" || payload.resultHash !== digest(saved))
+      throw new ReplayIntegrityError("Ślad aktywacji nie zgadza się z potwierdzeniem SHA-256");
+
+    const engine = new ActivationEngine(
+      structuredClone(context.neurons) as NeuronState[],
+      structuredClone(context.synapses) as SynapseState[],
+      new HashChainLedger(new InMemoryEventStore()),
+      this.activationOptions,
+    );
+    const recomputed = engine.activate(context.request);
+    const comparison = structuredClone(saved);
+    delete comparison.provenance;
+    delete comparison.replayContext;
+    if (canonicalJson(comparison) !== canonicalJson(recomputed))
+      throw new ReplayIntegrityError("Historyczna propagacja neuronów nie jest odtwarzalna");
+
+    return {
+      activationId,
+      replayMatched: true,
+      ledgerValid: true,
+      receiptEventHash: receipt.eventHash,
+      provenance,
+    };
   }
 
   inspectActivation(activationId: string): ActivationResult | null {
