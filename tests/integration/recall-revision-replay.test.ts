@@ -274,9 +274,8 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
           sourceRevision: { documentId: id, revision: 1 },
         });
         expect(executed.status).toBe(200);
-        expect((await api(url, "brain/activations/" + activationId + "/replay")).status).toBe(
-          200,
-        );
+        const initialReplay = await api(url, "brain/activations/" + activationId + "/replay");
+        expect(initialReplay.status).toBe(200);
         const tamper = new Database(databasePath);
         try {
           const row = tamper
