@@ -131,7 +131,7 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
     });
   });
 
-  it("CONTRACT RED: historyczny recall respektuje żądaną rewizję i oznacza ją jako nieaktualną", async () => {
+  it("CONTRACT RED: historyczny recall jest przypięty do r1", async () => {
     await withBrain(async ({ url }) => {
       const original = await makeDocument(url);
       const id = original.documentId as string;
@@ -147,7 +147,7 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
     });
   });
 
-  it("CONTRACT RED: aktywacja ma trwałe powiązanie z rewizją dokumentu i dokładnym hashem IR", async () => {
+  it("CONTRACT RED: aktywacja wiąże rewizję z irHash", async () => {
     await withBrain(async ({ url }) => {
       const original = await makeDocument(url);
       const id = original.documentId as string;
@@ -173,7 +173,7 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
     });
   });
 
-  it("CONTRACT RED: activationId jest niezmiennym identyfikatorem wykonania (fail-closed)", async () => {
+  it("CONTRACT RED: activationId nie nadpisuje wyniku", async () => {
     await withBrain(async ({ url }) => {
       const activationId = "replay-immutable-a1";
       const first = await api(url, "brain/activate", "POST", {
