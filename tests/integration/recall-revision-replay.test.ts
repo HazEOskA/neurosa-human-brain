@@ -131,7 +131,7 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
     });
   });
 
-  it("CONTRACT RED: historyczny recall jest przypięty do r1", async () => {
+  it("PROOF: historyczny recall jest przypięty do r1", async () => {
     await withBrain(async ({ url }) => {
       const original = await makeDocument(url);
       const id = original.documentId as string;
@@ -144,10 +144,12 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
       expect(pinned.revision).toBe(1);
       expect(pinned.contentHash).toBe(original.contentHash);
       expect(pinned.sourceCurrent).toBe(false);
+      expect(String(historical.text)).toContain("original decision r1");
+      expect(String(historical.text)).not.toContain("superseding decision r2");
     });
   });
 
-  it("CONTRACT RED: aktywacja wiąże rewizję z irHash", async () => {
+  it("PROOF: aktywacja wiąże rewizję z irHash", async () => {
     await withBrain(async ({ url }) => {
       const original = await makeDocument(url);
       const id = original.documentId as string;
@@ -170,10 +172,30 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
         "provenance.irHash",
         expect.stringMatching(/^[a-f0-9]{64}$/u),
       );
+      const eventsBefore = await api(url, "brain/events");
+      const proof = await api(url, "brain/activations/" + activationId + "/replay");
+      expect(proof.status).toBe(200);
+      expect(proof.data.replayMatched).toBe(true);
+      expect(proof.data.ledgerValid).toBe(true);
+      expect(proof.data.sourceCurrent).toBe(true);
+      expect(proof.data.currentRevision).toBe(1);
+      expect(proof.data).toHaveProperty(
+        "receiptEventHash",
+        expect.stringMatching(/^[a-f0-9]{64}$/u),
+      );
+      const eventsAfter = await api(url, "brain/events");
+      expect(eventsAfter.data).toEqual(eventsBefore.data);
+
+      await updateToR2(url, id);
+      const proofAfterRevision = await api(url, "brain/activations/" + activationId + "/replay");
+      expect(proofAfterRevision.status).toBe(200);
+      expect(proofAfterRevision.data.replayMatched).toBe(true);
+      expect(proofAfterRevision.data.sourceCurrent).toBe(false);
+      expect(proofAfterRevision.data.currentRevision).toBe(2);
     });
   });
 
-  it("CONTRACT RED: activationId nie nadpisuje wyniku", async () => {
+  it("PROOF: activationId nie nadpisuje wyniku", async () => {
     await withBrain(async ({ url }) => {
       const activationId = "replay-immutable-a1";
       const first = await api(url, "brain/activate", "POST", {
@@ -195,4 +217,38 @@ describe("RECALL_REVISION_REPLAY — prowadzony dowodami kontrakt r1 → r2", ()
       expect(stored.data).toEqual(first.data);
     });
   });
+  it("FAIL-CLOSED: brakująca rewizja nie może zostać przypięta", async () => {
+    await withBrain(async ({ url }) => {
+      const original = await makeDocument(url);
+      const id = original.documentId as string;
+      const invalid = await api(url, "brain/activate", "POST", {
+        activationId: "replay-invalid-version",
+        seedNeuronIds: ["Source"],
+        sourceRevision: { documentId: id, revision: 999 },
+      });
+      expect(invalid.status).toBe(409);
+      const missing = await api(url, "brain/activations/replay-invalid-version");
+      expect(missing.status).toBe(404);
+
+      const malformed = await api(url, "brain/activate", "POST", {
+        activationId: "replay-invalid-shape",
+        seedNeuronIds: ["Source"],
+        sourceRevision: { documentId: id, revision: "1" },
+      });
+      expect(malformed.status).toBe(400);
+    });
+  });
+
+  it("FAIL-CLOSED: aktywacja bez snapshotu nie może udawać historycznego replay", async () => {
+    await withBrain(async ({ url }) => {
+      const executed = await api(url, "brain/activate", "POST", {
+        activationId: "legacy-without-snapshot",
+        seedNeuronIds: ["Source"],
+      });
+      expect(executed.status).toBe(200);
+      const replay = await api(url, "brain/activations/legacy-without-snapshot/replay");
+      expect(replay.status).toBe(409);
+    });
+  });
+
 });
