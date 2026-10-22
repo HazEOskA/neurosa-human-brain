@@ -208,9 +208,7 @@ export class NeurosaRuntime {
       this.activationOptions,
     );
     const recomputed = engine.activate(context.request);
-    const comparison = structuredClone(saved);
-    delete comparison.provenance;
-    delete comparison.replayContext;
+    const comparison = { ...saved, provenance: undefined, replayContext: undefined };
     if (canonicalJson(comparison) !== canonicalJson(recomputed))
       throw new ReplayIntegrityError("Historyczna propagacja neuronów nie jest odtwarzalna");
 
