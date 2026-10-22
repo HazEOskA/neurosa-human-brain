@@ -367,11 +367,35 @@ export class SharedKnowledge {
     query: string,
     maxChars = 12000,
     limit = 10,
+    sourceRevision?: { readonly documentId: string; readonly revision: number },
   ): { text: string; references: readonly unknown[]; ledgerHead: string; truncated: boolean } {
     return this.repository.atomic(() => {
       const pinned = this.repository.listDocuments().filter((doc) => doc.pinned);
       const memories = this.workspace.search(query, limit);
-      const candidates = [...pinned, ...memories.map((item) => item.document)];
+      const historical =
+        sourceRevision === undefined
+          ? null
+          : this.repository
+              .listDocumentRevisions(sourceRevision.documentId)
+              .find((revision) => revision.revision === sourceRevision.revision);
+      if (sourceRevision !== undefined && historical === undefined)
+        throw new KnowledgeConflict("Nie istnieje żądana rewizja dokumentu");
+      if (historical !== null && historical !== undefined) {
+        const snapshot = historical.snapshot;
+        const sourceHash = createHash("sha256").update(snapshot.content).digest("hex");
+        if (
+          historical.contentHash !== sourceHash ||
+          snapshot.contentHash !== sourceHash ||
+          snapshot.revision !== historical.revision ||
+          snapshot.documentId !== historical.documentId
+        )
+          throw new KnowledgeConflict("Integralność historycznej rewizji jest naruszona");
+      }
+      const candidates = [
+        ...(historical === null || historical === undefined ? [] : [historical.snapshot]),
+        ...pinned,
+        ...memories.map((item) => item.document),
+      ];
       const seen = new Set<string>();
       const references: unknown[] = [];
       const head = this.repository.listEvents().at(-1)?.eventHash ?? "";
@@ -401,6 +425,16 @@ export class SharedKnowledge {
           revision: document.revision,
           contentHash: document.contentHash,
           sourceReference: document.sourceReference,
+          sourceCurrent: (() => {
+            const current = this.repository.loadDocument(document.documentId);
+            return (
+              current !== null &&
+              current.revision === document.revision &&
+              current.contentHash === document.contentHash &&
+              current.deletedAt === null &&
+              !current.archived
+            );
+          })(),
           core: document.pinned,
         });
       }
