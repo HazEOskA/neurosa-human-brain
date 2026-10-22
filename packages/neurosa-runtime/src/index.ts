@@ -190,12 +190,10 @@ export class NeurosaRuntime {
     )
       throw new ReplayIntegrityError("Niezgodny snapshot wejściowy lub IR");
 
-    const receipts = this.repository
-      .listEvents()
-      .filter(
-        (event) =>
-          event.eventType === "RUNTIME_STATE_SAVED" && event.activationId === activationId,
-      );
+    const receipts = this.repository.listEvents().filter((event) => {
+      if (event.eventType !== "RUNTIME_STATE_SAVED") return false;
+      return event.activationId === activationId;
+    });
     if (receipts.length !== 1)
       throw new ReplayIntegrityError("Brak unikalnego potwierdzenia aktywacji w ledgerze");
     const receipt = receipts[0]!;
