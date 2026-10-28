@@ -376,20 +376,81 @@ export class SharedKnowledge {
       return this.workspace.search(query, limit);
 
     const ignored = new Set([
-      "oraz", "jest", "jako", "które", "który", "która", "tego", "tym", "taki",
-      "takie", "moja", "moje", "mnie", "mam", "czy", "ale", "dla", "nie",
-      "ani", "jeśli", "jezeli", "jeżeli", "bez", "tylko", "odpowiedz", "odpowiedź",
-      "podaj", "sprawdź", "wtedy", "teraz", "przed", "przez", "jaki", "jakie",
-      "gdzie", "kiedy", "było", "była", "był", "być", "dane", "danych",
-      "poprzedniej", "rozmowie", "informację", "informacji", "źródłowy", "źródłowego",
-      "dokument", "dokumentu", "wczesniej", "wcześniej", "którego", "możesz",
-      "zapisalem", "zapisałem", "odczytaj", "odzyskaj", "brak", "please",
-      "from", "that", "this", "with", "what", "where", "have", "been",
+      "oraz",
+      "jest",
+      "jako",
+      "które",
+      "który",
+      "która",
+      "tego",
+      "tym",
+      "taki",
+      "takie",
+      "moja",
+      "moje",
+      "mnie",
+      "mam",
+      "czy",
+      "ale",
+      "dla",
+      "nie",
+      "ani",
+      "jeśli",
+      "jezeli",
+      "jeżeli",
+      "bez",
+      "tylko",
+      "odpowiedz",
+      "odpowiedź",
+      "podaj",
+      "sprawdź",
+      "wtedy",
+      "teraz",
+      "przed",
+      "przez",
+      "jaki",
+      "jakie",
+      "gdzie",
+      "kiedy",
+      "było",
+      "była",
+      "był",
+      "być",
+      "dane",
+      "danych",
+      "poprzedniej",
+      "rozmowie",
+      "informację",
+      "informacji",
+      "źródłowy",
+      "źródłowego",
+      "dokument",
+      "dokumentu",
+      "wczesniej",
+      "wcześniej",
+      "którego",
+      "możesz",
+      "zapisalem",
+      "zapisałem",
+      "odczytaj",
+      "odzyskaj",
+      "brak",
+      "please",
+      "from",
+      "that",
+      "this",
+      "with",
+      "what",
+      "where",
+      "have",
+      "been",
     ]);
-    const quoted = [...query.matchAll(/[„“"]([^„”"]{3,120})[”"]/gu)]
-      .flatMap((match) => match[1]!.toLocaleLowerCase("pl").match(/[\p{L}\p{N}]{3,}/gu) ?? []);
+    const quoted = [...query.matchAll(/[„“"]([^„”"]{3,120})[”"]/gu)].flatMap(
+      (match) => match[1]!.toLocaleLowerCase("pl").match(/[\p{L}\p{N}]{3,}/gu) ?? [],
+    );
     const terms = [...new Set([...quoted, ...words])]
-      .filter((word) => !ignored.has(word)).slice(0, 40);
+      .filter((word) => !ignored.has(word))
+      .slice(0, 40);
     if (terms.length === 0) return [];
 
     const scored = new Map<string, { hit: DocumentSearchResult; matches: number }>();
@@ -408,10 +469,12 @@ export class SharedKnowledge {
     const minimumMatches = terms.length > 1 ? 2 : 1;
     return [...scored.values()]
       .filter((entry) => entry.matches >= minimumMatches)
-      .sort((a, b) =>
-        b.matches - a.matches ||
-        a.hit.rank - b.hit.rank ||
-        b.hit.document.updatedAt.localeCompare(a.hit.document.updatedAt))
+      .sort(
+        (a, b) =>
+          b.matches - a.matches ||
+          a.hit.rank - b.hit.rank ||
+          b.hit.document.updatedAt.localeCompare(a.hit.document.updatedAt),
+      )
       .slice(0, limit)
       .map((entry) => entry.hit);
   }

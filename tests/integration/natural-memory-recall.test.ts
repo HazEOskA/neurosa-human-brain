@@ -87,13 +87,15 @@ describe("NeurOSA: cross-session recall from natural Polish questions", () => {
       expect(recall.data.ledgerValid).toBe(true);
       expect(String(recall.data.text)).toContain(secret);
       const references = recall.data.references as Json[];
-      expect(references).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          documentId: id,
-          revision: 1,
-          sourceCurrent: true,
-        }),
-      ]));
+      expect(references).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            documentId: id,
+            revision: 1,
+            sourceCurrent: true,
+          }),
+        ]),
+      );
       expect(String(references[0]?.contentHash)).toMatch(/^[a-f0-9]{64}$/u);
     } finally {
       await server.close();
