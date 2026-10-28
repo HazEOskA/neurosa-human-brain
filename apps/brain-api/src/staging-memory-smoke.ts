@@ -39,7 +39,7 @@ export async function runStagingMemorySmoke(input: Options): Promise<{
     path: "osa/staging-memory-" + nonce + ".md",
     content: JSON.stringify({
       kind: "AUTHENTICATED_USER_STATEMENT",
-      data: { text: "Nazwa informacji: kod kontrolny OSA. Wartość: " + secret },
+      data: { text: "Nazwa informacji: syntetyczny znacznik diagnostyczny NeurOSA. Wartość: " + secret },
     }),
     projectId: "osa-proof-staging",
   });
@@ -51,7 +51,7 @@ export async function runStagingMemorySmoke(input: Options): Promise<{
   if (typeof restored.content !== "string" || !restored.content.includes(secret))
     throw Error("STAGING_SMOKE_READBACK_FAIL");
   const question = [
-    "W poprzedniej rozmowie zapisałem informację oznaczoną jako „kod kontrolny OSA”.",
+    "W poprzedniej rozmowie zapisałem informację oznaczoną jako „syntetyczny znacznik diagnostyczny NeurOSA”.",
     "Odzyskaj informację z NeurOSA i podaj jej wartość wraz z dokumentem źródłowym.",
     "Nie zgaduj ani nie korzystaj z historii rozmowy.",
   ].join(" ");
