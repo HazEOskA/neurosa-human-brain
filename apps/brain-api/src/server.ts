@@ -82,13 +82,8 @@ const stagingSmokeProject =
   process.env.RAILWAY_PROJECT_ID === "bbfcceb0-cef8-422b-8eb9-b1761b2a670d" &&
   process.env.RAILWAY_ENVIRONMENT_NAME === "staging" &&
   process.env.NEUROSA_DATABASE_PATH === "/data/brain.db";
-console.log(
-  JSON.stringify({
-    gate: "NEUROSA_STAGING_SMOKE_CONFIG",
-    staging_project: stagingSmokeProject,
-    flag_present: process.env.NEUROSA_STAGING_MEMORY_SMOKE !== undefined,
-  }),
-);
+console.log("NEUROSA_STAGING_SMOKE_CONFIG " + (stagingSmokeProject ? "ENABLED" : "DISABLED") +
+  " FLAG_" + (process.env.NEUROSA_STAGING_MEMORY_SMOKE === "enabled" ? "ENABLED" : "NOT_ENABLED"));
 if (stagingSmokeProject) {
   void import("./staging-memory-smoke.js")
     .then(({ runStagingMemorySmoke }) =>
@@ -99,10 +94,10 @@ if (stagingSmokeProject) {
       }),
     )
     .then((result) =>
-      console.log(JSON.stringify({ gate: "NEUROSA_STAGING_LIVE_MEMORY_E2E", ...result })),
+      console.log("NEUROSA_STAGING_LIVE_MEMORY_E2E " + result.result),
     )
     .catch(() =>
-      console.error(JSON.stringify({ gate: "NEUROSA_STAGING_LIVE_MEMORY_E2E", result: "FAIL" })),
+      console.error("NEUROSA_STAGING_LIVE_MEMORY_E2E FAIL"),
     );
 }
 
