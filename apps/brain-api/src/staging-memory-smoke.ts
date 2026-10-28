@@ -69,15 +69,11 @@ export async function runStagingMemorySmoke(input: Options): Promise<{
     typeof recalled.text !== "string" ||
     !recalled.text.includes(secret) ||
     !Array.isArray(refs) ||
-    !refs.some(
-      (ref) =>
-        ref &&
-        typeof ref === "object" &&
-        "documentId" in ref &&
-        ref.documentId === documentId &&
-        "sourceCurrent" in ref &&
-        ref.sourceCurrent === true,
-    )
+    !(refs as unknown[]).some((entry: unknown) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return false;
+      const ref = entry as Record<string, unknown>;
+      return ref["documentId"] === documentId && ref["sourceCurrent"] === true;
+    })
   )
     throw Error("STAGING_SMOKE_RECALL_FAIL");
   return {
