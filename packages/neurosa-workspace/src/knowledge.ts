@@ -365,6 +365,33 @@ export class SharedKnowledge {
   }
 
   /**
+   * A chat fact lookup uses original facts, not the audit records generated
+   * by previous model answers. Audit events remain stored, hash-chained and
+   * readable by document ID; this only filters the recall candidate list.
+   */
+  private sourceForRecall(document: BrainDocument): boolean {
+    // Synthetic Railway staging smoke records share a brain but are not user facts.
+    // Keep legacy smoke records out without deleting or modifying any documents.
+    if (
+      document.title === "OSA staging E2E marker" &&
+      document.path.startsWith("osa/staging-memory-")
+    )
+      return false;
+    let payload: unknown;
+    try {
+      payload = JSON.parse(document.content);
+    } catch {
+      return true;
+    }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return true;
+    const event = payload as Record<string, unknown>;
+    if (event.schema !== "osa.memory_event.v1") return true;
+    return !["CHAT_PROVENANCE", "VERIFIED_RUNTIME", "DIAGNOSTIC_TEST"].includes(
+      String(event.kind),
+    );
+  }
+
+  /**
    * Long chat prompts must not become an FTS5 query requiring EVERY word.
    * This is a bounded lexical fallback, not a vector search or an invented source.
    * Every returned document still comes from the canonical SQLite FTS index.
@@ -459,6 +486,7 @@ export class SharedKnowledge {
       // A single FTS token is safely escaped by searchDocuments. Never construct
       // SQL or allow arbitrary FTS expressions from a chat prompt.
       for (const hit of this.workspace.search(word, searchLimit)) {
+        if (!this.sourceForRecall(hit.document)) continue;
         const key = hit.document.documentId;
         const previous = scored.get(key);
         if (previous) previous.matches += 1;
