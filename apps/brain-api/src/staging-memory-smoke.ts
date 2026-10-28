@@ -35,7 +35,7 @@ export async function runStagingMemorySmoke(input: Options): Promise<{
   const nonce = randomBytes(12).toString("hex");
   const secret = "OSA-STAGING-" + nonce;
   const saved = await request("brain/remember", {
-    title: "OSA staging E2E marker",
+    title: "NeurOSA isolated smoke source v2",
     path: "osa/staging-memory-" + nonce + ".md",
     content: JSON.stringify({
       kind: "AUTHENTICATED_USER_STATEMENT",
