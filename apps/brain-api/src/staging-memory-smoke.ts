@@ -12,7 +12,8 @@ export async function runStagingMemorySmoke(input: Options): Promise<{
   ledger_valid: true;
   real_brain_api: true;
 }> {
-  if (process.env.NEUROSA_STAGING_MEMORY_SMOKE !== "enabled" ||
+  if (process.env.RAILWAY_PROJECT_ID !== "bbfcceb0-cef8-422b-8eb9-b1761b2a670d" ||
+      process.env.RAILWAY_ENVIRONMENT_NAME !== "staging" ||
       process.env.NEUROSA_DATABASE_PATH !== "/data/brain.db" ||
       !input.origin.startsWith("http://127.0.0.1:") ||
       !input.token || input.token.length < 24) throw Error("STAGING_SMOKE_DISABLED");
