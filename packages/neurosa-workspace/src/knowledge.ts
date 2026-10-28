@@ -370,9 +370,9 @@ export class SharedKnowledge {
    * Every returned document still comes from the canonical SQLite FTS index.
    */
   private recallCandidates(query: string, limit: number): readonly DocumentSearchResult[] {
-    const words = [...new Set(query.toLocaleLowerCase("pl").match(/[\\p{L}\\p{N}]{3,}/gu) ?? [])];
+    const words = [...new Set(query.toLocaleLowerCase("pl").match(/[\p{L}\p{N}]{3,}/gu) ?? [])];
     if (words.length === 0) return [];
-    if (words.length <= 3 && /^[\\p{L}\\p{N}\\s]+$/u.test(query))
+    if (words.length <= 3 && /^[\p{L}\p{N}\\s]+$/u.test(query))
       return this.workspace.search(query, limit);
 
     const ignored = new Set([
@@ -387,7 +387,7 @@ export class SharedKnowledge {
       "from", "that", "this", "with", "what", "where", "have", "been",
     ]);
     const quoted = [...query.matchAll(/[„“"]([^„”"]{3,120})[”"]/gu)]
-      .flatMap((match) => match[1]!.toLocaleLowerCase("pl").match(/[\\p{L}\\p{N}]{3,}/gu) ?? []);
+      .flatMap((match) => match[1]!.toLocaleLowerCase("pl").match(/[\p{L}\p{N}]{3,}/gu) ?? []);
     const terms = [...new Set([...quoted, ...words])]
       .filter((word) => !ignored.has(word)).slice(0, 40);
     if (terms.length === 0) return [];
