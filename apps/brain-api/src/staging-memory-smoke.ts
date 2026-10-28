@@ -62,7 +62,7 @@ export async function runStagingMemorySmoke(input: Options): Promise<{
     maxChars: 12000,
     limit: 10,
   });
-  const refs = recalled.references;
+  const refs: unknown = recalled.references;
   if (
     recalled.brainId !== input.brainId ||
     recalled.ledgerValid !== true ||
