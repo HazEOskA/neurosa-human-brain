@@ -39,7 +39,9 @@ export async function runStagingMemorySmoke(input: Options): Promise<{
     path: "osa/staging-memory-" + nonce + ".md",
     content: JSON.stringify({
       kind: "AUTHENTICATED_USER_STATEMENT",
-      data: { text: "Nazwa informacji: syntetyczny znacznik diagnostyczny NeurOSA. Wartość: " + secret },
+      data: {
+        text: "Nazwa informacji: syntetyczny znacznik diagnostyczny NeurOSA. Wartość: " + secret,
+      },
     }),
     projectId: "osa-proof-staging",
   });

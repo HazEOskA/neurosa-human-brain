@@ -127,7 +127,8 @@ describe("NeurOSA: cross-session recall from natural Polish questions", () => {
             schema: "osa.memory_event.v1",
             kind: "CHAT_PROVENANCE",
             data: {
-              prompt: "Odczytaj z NeurOSA wartość informacji o nazwie kod kontrolny OSA. " +
+              prompt:
+                "Odczytaj z NeurOSA wartość informacji o nazwie kod kontrolny OSA. " +
                 "Podaj dokładną wartość i identyfikator dokumentu źródłowego.",
               response: "BRAK DANYCH",
               observation: "Nie korzystaj z historii poprzedniego czatu.",
@@ -142,18 +143,24 @@ describe("NeurOSA: cross-session recall from natural Polish questions", () => {
           path: "osa/staging-memory-noise-" + index + ".md",
           content: JSON.stringify({
             kind: "AUTHENTICATED_USER_STATEMENT",
-            data: { text: "Nazwa informacji: kod kontrolny OSA. Wartość: OSA-STAGING-NOISE-" + index },
+            data: {
+              text: "Nazwa informacji: kod kontrolny OSA. Wartość: OSA-STAGING-NOISE-" + index,
+            },
           }),
         });
         expect(smoke.status).toBe(201);
       }
-      const query = "Odczytaj z NeurOSA wartość informacji o nazwie „kod kontrolny OSA” " +
+      const query =
+        "Odczytaj z NeurOSA wartość informacji o nazwie „kod kontrolny OSA” " +
         "zapisanej w poprzedniej rozmowie. Nie korzystaj z historii poprzedniego czatu. " +
         "Podaj dokładną wartość oraz identyfikator dokumentu źródłowego. " +
         "Jeśli nie masz danych, odpowiedz BRAK DANYCH.";
       expect(query).not.toContain(secret);
       const answer = await api(url, "brain/recall", {
-        query, includeCore: true, limit: 10, maxChars: 12000,
+        query,
+        includeCore: true,
+        limit: 10,
+        maxChars: 12000,
       });
       expect(answer.status).toBe(200);
       expect(answer.data.ledgerValid).toBe(true);

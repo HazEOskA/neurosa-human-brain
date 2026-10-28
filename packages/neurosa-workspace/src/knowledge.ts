@@ -386,9 +386,7 @@ export class SharedKnowledge {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) return true;
     const event = payload as Record<string, unknown>;
     if (event.schema !== "osa.memory_event.v1") return true;
-    return !["CHAT_PROVENANCE", "VERIFIED_RUNTIME", "DIAGNOSTIC_TEST"].includes(
-      String(event.kind),
-    );
+    return !["CHAT_PROVENANCE", "VERIFIED_RUNTIME", "DIAGNOSTIC_TEST"].includes(String(event.kind));
   }
 
   /**
