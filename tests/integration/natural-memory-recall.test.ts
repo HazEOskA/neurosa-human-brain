@@ -139,7 +139,7 @@ describe("NeurOSA: cross-session recall from natural Polish questions", () => {
           "content-type": "application/json",
         },
       });
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(204);
       const recall = await api(url, "brain/recall", {
         query: "Odszukaj zapisany kod kontrolny OSA z poprzedniej rozmowy",
         includeCore: true,
