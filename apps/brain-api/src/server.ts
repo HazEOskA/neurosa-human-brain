@@ -75,6 +75,18 @@ console.log(`NEUROSA-HB Brain API nasłuchuje: ${address.url}`);
 console.log(`Mózg: ${compilation.ir.brainId}`);
 console.log(`Baza: ${databasePath}`);
 
+// Opt-in staging-only integration probe. Never enabled in production.
+// The test uses the running Brain API and its current isolated DB.
+// Print only verdict booleans, never tokens, memory contents, or URLs.
+if (process.env.NEUROSA_STAGING_MEMORY_SMOKE === "enabled") {
+  void import("./staging-memory-smoke.js").then(({ runStagingMemorySmoke }) =>
+    runStagingMemorySmoke({ origin: "http://127.0.0.1:" + (process.env.NEUROSA_API_PORT ?? process.env.PORT ?? "8080"),
+      token: credentials[0]!.token, brainId: compilation.ir.brainId })
+  ).then(result => console.log(JSON.stringify({ gate: "NEUROSA_STAGING_LIVE_MEMORY_E2E", ...result })))
+    .catch(() => console.error(JSON.stringify({ gate: "NEUROSA_STAGING_LIVE_MEMORY_E2E", result: "FAIL" })));
+}
+
+
 let closing = false;
 async function close(): Promise<void> {
   if (closing) return;
