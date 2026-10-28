@@ -82,8 +82,12 @@ const stagingSmokeProject =
   process.env.RAILWAY_PROJECT_ID === "bbfcceb0-cef8-422b-8eb9-b1761b2a670d" &&
   process.env.RAILWAY_ENVIRONMENT_NAME === "staging" &&
   process.env.NEUROSA_DATABASE_PATH === "/data/brain.db";
-console.log("NEUROSA_STAGING_SMOKE_CONFIG " + (stagingSmokeProject ? "ENABLED" : "DISABLED") +
-  " FLAG_" + (process.env.NEUROSA_STAGING_MEMORY_SMOKE === "enabled" ? "ENABLED" : "NOT_ENABLED"));
+console.log(
+  "NEUROSA_STAGING_SMOKE_CONFIG " +
+    (stagingSmokeProject ? "ENABLED" : "DISABLED") +
+    " FLAG_" +
+    (process.env.NEUROSA_STAGING_MEMORY_SMOKE === "enabled" ? "ENABLED" : "NOT_ENABLED"),
+);
 if (stagingSmokeProject) {
   void import("./staging-memory-smoke.js")
     .then(({ runStagingMemorySmoke }) =>
@@ -93,12 +97,8 @@ if (stagingSmokeProject) {
         brainId: compilation.ir.brainId,
       }),
     )
-    .then((result) =>
-      console.log("NEUROSA_STAGING_LIVE_MEMORY_E2E " + result.result),
-    )
-    .catch(() =>
-      console.error("NEUROSA_STAGING_LIVE_MEMORY_E2E FAIL"),
-    );
+    .then((result) => console.log("NEUROSA_STAGING_LIVE_MEMORY_E2E " + result.result))
+    .catch(() => console.error("NEUROSA_STAGING_LIVE_MEMORY_E2E FAIL"));
 }
 
 let closing = false;
