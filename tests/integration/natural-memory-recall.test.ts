@@ -103,6 +103,71 @@ describe("NeurOSA: cross-session recall from natural Polish questions", () => {
     }
   });
 
+  it("retrieves the user's actual code and excludes competing provenance and staging markers", async () => {
+    const { url, server, runtime } = await fixture();
+    try {
+      const secret = "KRET-591-LAZUR";
+      const statement = await api(url, "brain/remember", {
+        title: "Informacja przekazana przez użytkownika OSA",
+        path: "osa/user-statement-kret.md",
+        content: JSON.stringify({
+          schema: "osa.memory_event.v1",
+          kind: "AUTHENTICATED_USER_STATEMENT",
+          data: { text: "TEST MEMORY E2E. Nazwa: kod kontrolny OSA. Wartość: " + secret },
+        }),
+        projectId: "osa-proof-staging",
+      });
+      expect(statement.status).toBe(201);
+      const statementId = (statement.data.document as Json).documentId;
+      for (let index = 0; index < 16; index++) {
+        const audit = await api(url, "brain/remember", {
+          title: "Dowód pochodzenia zdarzenia OSA",
+          path: "osa/chat-provenance-" + index + ".md",
+          content: JSON.stringify({
+            schema: "osa.memory_event.v1",
+            kind: "CHAT_PROVENANCE",
+            data: {
+              prompt: "Odczytaj z NeurOSA wartość informacji o nazwie kod kontrolny OSA. " +
+                "Podaj dokładną wartość i identyfikator dokumentu źródłowego.",
+              response: "BRAK DANYCH",
+              observation: "Nie korzystaj z historii poprzedniego czatu.",
+            },
+          }),
+        });
+        expect(audit.status).toBe(201);
+      }
+      for (let index = 0; index < 4; index++) {
+        const smoke = await api(url, "brain/remember", {
+          title: "OSA staging E2E marker",
+          path: "osa/staging-memory-noise-" + index + ".md",
+          content: JSON.stringify({
+            kind: "AUTHENTICATED_USER_STATEMENT",
+            data: { text: "Nazwa informacji: kod kontrolny OSA. Wartość: OSA-STAGING-NOISE-" + index },
+          }),
+        });
+        expect(smoke.status).toBe(201);
+      }
+      const query = "Odczytaj z NeurOSA wartość informacji o nazwie „kod kontrolny OSA” " +
+        "zapisanej w poprzedniej rozmowie. Nie korzystaj z historii poprzedniego czatu. " +
+        "Podaj dokładną wartość oraz identyfikator dokumentu źródłowego. " +
+        "Jeśli nie masz danych, odpowiedz BRAK DANYCH.";
+      expect(query).not.toContain(secret);
+      const answer = await api(url, "brain/recall", {
+        query, includeCore: true, limit: 10, maxChars: 12000,
+      });
+      expect(answer.status).toBe(200);
+      expect(answer.data.ledgerValid).toBe(true);
+      expect(String(answer.data.text)).toContain(secret);
+      expect(String(answer.data.text)).not.toContain("OSA-STAGING-NOISE");
+      const refs = answer.data.references as Json[];
+      expect(refs.map((ref) => ref.documentId)).toEqual([statementId]);
+      expect(refs[0]?.sourceCurrent).toBe(true);
+    } finally {
+      await server.close();
+      runtime.close();
+    }
+  });
+
   it("does not fabricate a source for an unrelated question", async () => {
     const { url, server, runtime } = await fixture();
     try {
