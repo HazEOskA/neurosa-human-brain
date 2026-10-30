@@ -397,8 +397,11 @@ export class SharedKnowledge {
   private recallCandidates(query: string, limit: number): readonly DocumentSearchResult[] {
     const words = [...new Set(query.toLocaleLowerCase("pl").match(/[\p{L}\p{N}]{3,}/gu) ?? [])];
     if (words.length === 0) return [];
-    if (words.length <= 3 && /^[\p{L}\p{N}\\s]+$/u.test(query))
-      return this.workspace.search(query, limit);
+    if (words.length <= 3 && /^[\p{L}\p{N}\s]+$/u.test(query))
+      return this.workspace
+        .search(query, Math.min(100, Math.max(limit * 4, 20)))
+        .filter((hit) => this.sourceForRecall(hit.document))
+        .slice(0, limit);
 
     const ignored = new Set([
       "oraz",

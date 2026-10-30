@@ -47,6 +47,44 @@ async function api(url: string, path: string, body: Json) {
 }
 
 describe("NeurOSA: cross-session recall from natural Polish questions", () => {
+  it("excludes audit and diagnostic records from short factual searches", async () => {
+    const { url, server, runtime } = await fixture();
+    try {
+      for (const kind of ["CHAT_PROVENANCE", "VERIFIED_RUNTIME", "DIAGNOSTIC_TEST"]) {
+        const saved = await api(url, "brain/remember", {
+          title: "Kontrola pamięci " + kind,
+          content: JSON.stringify({
+            schema: "osa.memory_event.v1",
+            kind,
+            data: { text: "szafir" },
+          }),
+        });
+        expect(saved.status).toBe(201);
+      }
+      const saved = await api(url, "brain/remember", {
+        title: "Informacja użytkownika",
+        content: JSON.stringify({
+          schema: "osa.memory_event.v1",
+          kind: "AUTHENTICATED_USER_STATEMENT",
+          data: { text: "szafir wartość pamięci" },
+        }),
+      });
+      expect(saved.status).toBe(201);
+      const id = (saved.data.document as Json).documentId;
+      const result = await api(url, "brain/recall", {
+        query: "szafir",
+        includeCore: true,
+        limit: 10,
+      });
+      expect(result.status).toBe(200);
+      expect((result.data.references as Json[]).map((ref) => ref.documentId)).toEqual([id]);
+      expect(String(result.data.text)).toContain("wartość pamięci");
+    } finally {
+      await server.close();
+      runtime.close();
+    }
+  });
+
   it("recovers a real stored statement with a source reference without repeating its value", async () => {
     const { url, server, runtime } = await fixture();
     try {
