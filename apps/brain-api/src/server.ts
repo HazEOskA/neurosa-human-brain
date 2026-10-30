@@ -51,6 +51,25 @@ if (credentialFile !== undefined) {
   credentials = [
     { token, agentId: process.env.NEUROSA_AGENT_ID ?? "operator-localny", scopes: scopesFromEnv() },
   ];
+  const extra = process.env.NEUROSA_STAGING_PREVIEW_TOKEN;
+  if (extra !== undefined) {
+    if (
+      process.env.RAILWAY_PROJECT_ID !== "bbfcceb0-cef8-422b-8eb9-b1761b2a670d" ||
+      process.env.RAILWAY_ENVIRONMENT_NAME !== "staging" ||
+      extra.length < 32 ||
+      extra === token ||
+      credentials[0]!.agentId === "osa-proof-preview-staging"
+    )
+      throw new Error("Nieprawidłowy dodatkowy dostęp staging");
+    credentials = [
+      ...credentials,
+      {
+        token: extra,
+        agentId: "osa-proof-preview-staging",
+        scopes: ["brain:read", "memory:read", "memory:write"],
+      },
+    ];
+  }
 }
 
 const sourcePath = resolve(process.env.NEUROSA_BRAIN_SOURCE ?? "examples/minimal-brain/brain.nsa");
