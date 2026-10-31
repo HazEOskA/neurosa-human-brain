@@ -51,6 +51,19 @@ if (credentialFile !== undefined) {
   credentials = [
     { token, agentId: process.env.NEUROSA_AGENT_ID ?? "operator-localny", scopes: scopesFromEnv() },
   ];
+  const osaToken = process.env.NEUROSA_OSA_PROOF_TOKEN;
+  if (osaToken !== undefined) {
+    if (osaToken.length < 32 || osaToken !== osaToken.trim() || osaToken === token)
+      throw new Error("Nieprawidłowy token OSA Proof");
+    credentials = [
+      ...credentials,
+      {
+        token: osaToken,
+        agentId: "osa-proof-production",
+        scopes: ["brain:read", "memory:read", "memory:write"],
+      },
+    ];
+  }
 }
 
 const sourcePath = resolve(process.env.NEUROSA_BRAIN_SOURCE ?? "examples/minimal-brain/brain.nsa");
